@@ -2,9 +2,11 @@
     "version": "0.2",
     "language": "en",
     "words": [
+        "defmt",
         "docsrs",
         "fraims",
         "Haddad",
+        "heapless",
         "rustdoc",
         "zerocopy"
     ],
