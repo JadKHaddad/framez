@@ -1,7 +1,7 @@
 use core::error::Error;
 
 use embedded_io_adapters::tokio_1::FromTokio;
-use fraims::{ReadFrames, WriteFrames, codec::lines::StrLines, next};
+use fraims::{FramedRead, FramedWrite, codec::lines::StrLines, next};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (read, write) = tokio::io::duplex(1024);
 
     let read_buf = &mut [0u8; 1024];
-    let mut framed_read = ReadFrames::new(StrLines::new(), FromTokio::new(read), read_buf);
+    let mut framed_read = FramedRead::new(StrLines::new(), FromTokio::new(read), read_buf);
 
     let reader = async move {
         while let Some(item) = next!(framed_read).transpose()? {
@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let write_buf = &mut [0u8; 1024];
-    let mut framed_write = WriteFrames::new(StrLines::new(), FromTokio::new(write), write_buf);
+    let mut framed_write = FramedWrite::new(StrLines::new(), FromTokio::new(write), write_buf);
 
     let writer = async move {
         let items = ["Hello, world!", "How are you?", "Goodbye!"];

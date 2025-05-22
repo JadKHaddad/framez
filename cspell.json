@@ -2,12 +2,17 @@
     "version": "0.2",
     "language": "en",
     "words": [
+        "clippy",
         "defmt",
         "docsrs",
         "fraims",
         "Haddad",
         "heapless",
+        "MSRV",
+        "nextest",
         "rustdoc",
+        "Swatinem",
+        "taiki",
         "zerocopy"
     ],
     "ignorePaths": [

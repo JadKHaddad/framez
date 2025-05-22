@@ -1,0 +1,80 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  tests:
+    name: Tests
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+        os:
+          - ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      # Format
+
+      - name: Format
+        run: cargo fmt -- --check
+
+      # Clippy
+
+      - name: Clippy --no-default-features
+        run: cargo clippy --no-default-features -- -D warnings
+
+      - name: Clippy -- default
+        run: cargo clippy --features=default -- -D warnings
+
+      - name: Clippy --all-features
+        run: cargo clippy --all --all-features -- -D warnings
+
+      - name: Clippy -- pretty-hex-fmt
+        run: cargo clippy --no-default-features --features="pretty-hex-fmt" -- -D warnings
+
+      - name: Clippy -- char-fmt
+        run: cargo clippy --no-default-features --features="char-fmt" -- -D warnings
+
+      - name: Clippy -- log
+        run: cargo clippy --no-default-features --features="log" -- -D warnings
+
+      - name: Clippy -- defmt
+        run: cargo clippy --no-default-features --features="defmt" -- -D warnings
+
+      - name: Clippy -- tracing
+        run: cargo clippy --no-default-features --features="tracing" -- -D warnings
+
+      # Test
+
+      - name: Test
+        run: cargo nextest run
+
+      - name: Test -- buffer-early-shift
+        run: cargo nextest run --features buffer-early-shift

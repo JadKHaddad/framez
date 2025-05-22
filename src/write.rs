@@ -60,14 +60,14 @@ impl<'buf> State<'buf> {
 /// A sink that writes encoded frames into an underlying writable sink using an [`Encoder`].
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct WriteFrames<'buf, E, W> {
+pub struct FramedWrite<'buf, E, W> {
     state: State<'buf>,
     encoder: E,
     writer: W,
 }
 
-impl<'buf, E, W> WriteFrames<'buf, E, W> {
-    /// Creates a new [`WriteFrames`] with the given `encoder` and `writer`.
+impl<'buf, E, W> FramedWrite<'buf, E, W> {
+    /// Creates a new [`FramedWrite`] with the given `encoder` and `writer`.
     #[inline]
     pub fn new(encoder: E, writer: W, buffer: &'buf mut [u8]) -> Self {
         Self {
@@ -101,7 +101,7 @@ impl<'buf, E, W> WriteFrames<'buf, E, W> {
         &mut self.writer
     }
 
-    /// Consumes the [`WriteFrames`] and returns the `encoder` and `writer`.
+    /// Consumes the [`FramedWrite`] and returns the `encoder` and `writer`.
     #[inline]
     pub fn into_parts(self) -> (E, W) {
         (self.encoder, self.writer)

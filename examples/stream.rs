@@ -1,8 +1,10 @@
-use core::error::Error;
-use std::{pin::pin, str::FromStr};
+use core::{error::Error, pin::pin};
 
 use embedded_io_adapters::tokio_1::FromTokio;
-use fraims::{ReadFrames, WriteFrames, codec::lines::StrLines, next};
+use fraims::{
+    FramedReadOwned, FramedWrite,
+    codec::lines::{StrLines, StringLines},
+};
 use futures::{SinkExt, StreamExt};
 
 #[tokio::main]
@@ -14,13 +16,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (read, write) = tokio::io::duplex(1024);
 
     let read_buf = &mut [0u8; 1024];
-    let mut framed_read = ReadFrames::new(StrLines::new(), FromTokio::new(read), read_buf);
+    let mut framed_read =
+        FramedReadOwned::new(StringLines::<32>::new(), FromTokio::new(read), read_buf);
 
     let reader = async move {
-        let stream = framed_read.stream_f(String::from_str);
+        let stream = framed_read.stream();
         let mut stream = pin!(stream);
 
-        while let Some(item) = stream.next().await.transpose()?.transpose()? {
+        while let Some(item) = stream.next().await.transpose()? {
             tracing::info!(target: "reader", %item, "received frame")
         }
 
@@ -28,7 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let write_buf = &mut [0u8; 1024];
-    let mut framed_write = WriteFrames::new(StrLines::new(), FromTokio::new(write), write_buf);
+    let mut framed_write = FramedWrite::new(StrLines::new(), FromTokio::new(write), write_buf);
 
     let writer = async move {
         let items = ["Hello, world!", "How are you?", "Goodbye!"];
