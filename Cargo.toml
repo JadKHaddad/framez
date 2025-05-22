@@ -38,3 +38,13 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[[example]]
+name = "zerocopy"
+path = "examples/zerocopy.rs"
+required-features = []
+
+[[example]]
+name = "owned"
+path = "examples/owned.rs"
+required-features = []
