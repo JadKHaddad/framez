@@ -1,12 +1,10 @@
-//! Framed read stream. Transforms an [`Read`] into a stream of frames.
-
-use core::pin::Pin;
+//! Framed read stream. Transforms a [`Read`] into a stream of frames.
 
 use embedded_io_async::Read;
 use futures::Stream;
 
 use crate::{
-    decode::{Decoder, Owner},
+    decode::Decoder,
     logging::{debug, error, trace, warn},
 };
 
@@ -301,53 +299,6 @@ impl<'buf, D, R> ReadFrames<'buf, D, R> {
         }
     }
 
-    // /// Converts the [`FramedRead`] into a stream of frames.
-    // pub fn stream(
-    //     &mut self,
-    // ) -> impl Stream<Item = Result<D::Item, ReadError<R::Error, D::Error>>> + '_
-    // where
-    //     D: DecoderOwned,
-    //     R: Read,
-    // {
-    //     futures::stream::unfold((self, false), |(this, errored)| async move {
-    //         if errored {
-    //             return None;
-    //         }
-
-    //         match this.next_owned().await {
-    //             Some(Ok(item)) => Some((Ok(item), (this, false))),
-    //             Some(Err(err)) => Some((Err(err), (this, true))),
-    //             None => None,
-    //         }
-    //     })
-    // }
-
-    // TODO
-    // pub fn stream_<F, U>(
-    //     &mut self,
-    //     f: F,
-    // ) -> impl Stream<Item = Result<U, ReadError<R::Error, D::Error>>> + '_
-    // where
-    //     D: for<'a> Decoder<'a>,
-    //     R: Read,
-    //     F: FnOnce(<D as Decoder<'_>>::Item) -> U + Copy + 'static,
-    // {
-    //     futures::stream::unfold((self, false), move |(this, errored)| async move {
-    //         if errored {
-    //             return None;
-    //         }
-
-    //         let item = crate::next!(this).map(|res| res.map(f));
-
-    //         match item {
-    //             Some(Ok(item)) => Some((Ok(item), (this, false))),
-    //             Some(Err(err)) => Some((Err(err), (this, true))),
-    //             None => None,
-    //         }
-    //     })
-    // }
-
-    // /// TODO
     pub fn stream__<F, U>(
         &mut self,
         f: F,
@@ -395,146 +346,4 @@ impl<'buf, D, R> ReadFrames<'buf, D, R> {
             }
         })
     }
-
-    pub fn stream_o<O>(
-        &mut self,
-    ) -> impl Stream<Item = Result<O::Item, ReadError<R::Error, D::Error>>> + '_
-    where
-        D: for<'a> Decoder<'a>,
-        O: Owner,
-        R: Read,
-    {
-        futures::stream::unfold((self, false), move |(this, errored)| async move {
-            if errored {
-                return None;
-            }
-
-            let item = crate::next!(this).map(|res| res.map(O::own::<'_, D>));
-
-            match item {
-                Some(Ok(item)) => Some((Ok(item), (this, false))),
-                Some(Err(err)) => Some((Err(err), (this, true))),
-                None => None,
-            }
-        })
-    }
-
-    // pub fn stream_o(
-    //     &mut self,
-    // ) -> impl Stream<Item = Result<D::OwnedItem, ReadError<R::Error, D::Error>>> + '_
-    // where
-    //     D: for<'a> Decoder<'a>,
-    //     R: Read,
-    // {
-    //     futures::stream::unfold((self, false), move |(this, errored)| async move {
-    //         if errored {
-    //             return None;
-    //         }
-
-    //         let item = {
-    //             'next: loop {
-    //                 match this.maybe_next().await {
-    //                     Some(Ok(None)) => continue 'next,
-    //                     Some(Ok(Some(item))) => break 'next Some(Ok(this.decoder.owned(item))),
-    //                     Some(Err(err)) => break 'next Some(Err(err)),
-    //                     None => break 'next None,
-    //                 }
-    //             }
-    //         };
-
-    //         //let item = item.map(|res| res.map(|item| this.decoder.owned(item)));
-
-    //         match item {
-    //             Some(Ok(item)) => Some((Ok(item), (this, false))),
-    //             Some(Err(err)) => Some((Err(err), (this, true))),
-    //             None => None,
-    //         }
-    //     })
-    // }
-
-    // pub fn stream_m<M>(
-    //     &mut self,
-    // ) -> impl Stream<
-    //     Item = Result<<M as Mapper<<D as Decoder<'_>>::Item>>::Item, ReadError<R::Error, D::Error>>,
-    // > + '_
-    // where
-    //     D: for<'a> Decoder<'a>,
-    //     M: for<'a> Mapper<<D as Decoder<'a>>::Item>,
-    //     for<'a> <M as Mapper<<D as Decoder<'a>>::Item>>::Item: 'static,
-    //     R: Read,
-    // {
-    //     futures::stream::unfold((self, false), |(this, errored)| async move {
-    //         if errored {
-    //             return None;
-    //         }
-
-    //         let item = crate::next!(this).map(|res| res.map(M::map));
-
-    //         match item {
-    //             Some(Ok(item)) => Some((Ok(item), (this, false))),
-    //             Some(Err(err)) => Some((Err(err), (this, true))),
-    //             None => None,
-    //         }
-    //     })
-    // }
-
-    // pub fn stream_o<'this, O>(
-    //     &'this mut self,
-    //     owner: O,
-    // ) -> impl Stream<Item = Result<O::Item, ReadError<R::Error, O::Error>>> + '_
-    // where
-    //     O: Owner<'this, D> + 'static,
-    //     D: Decoder<'this>,
-    //     R: Read,
-    // {
-    //     futures::stream::unfold(
-    //         (self, owner, false),
-    //         move |(this, mut owner, errored)| async move {
-    //             if errored {
-    //                 return None;
-    //             }
-
-    //             let item = 'next: loop {
-    //                 match this.maybe_next().await {
-    //                     Some(Ok(None)) => continue 'next,
-    //                     Some(Ok(Some(item))) => break 'next Some(Ok(item)),
-    //                     Some(Err(err)) => break 'next Some(Err(err)),
-    //                     None => break 'next None,
-    //                 }
-    //             };
-
-    //             let item = match item {
-    //                 Some(result) => match result {
-    //                     Ok(item) => {
-    //                         let item = owner.own(item);
-
-    //                         match item {
-    //                             Ok(item) => Some(Ok(item)),
-    //                             Err(err) => Some(Err(ReadError::Decode(err))),
-    //                         }
-    //                     }
-    //                     Err(err) => match err {
-    //                         ReadError::IO(err) => Some(Err(ReadError::IO(err))),
-    //                         ReadError::Decode(err) => {
-    //                             Some(Err(ReadError::Decode(O::Error::from(err))))
-    //                         }
-    //                         ReadError::BufferTooSmall => Some(Err(ReadError::BufferTooSmall)),
-    //                         ReadError::BytesRemainingOnStream => {
-    //                             Some(Err(ReadError::BytesRemainingOnStream))
-    //                         }
-    //                     },
-    //                 },
-    //                 None => None,
-    //             };
-
-    //             match item {
-    //                 Some(Ok(item)) => Some((Ok(item), (this, owner, false))),
-    //                 Some(Err(err)) => Some((Err(err), (this, owner, true))),
-    //                 None => None,
-    //             };
-
-    //             todo!()
-    //         },
-    //     )
-    // }
 }

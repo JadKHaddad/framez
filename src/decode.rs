@@ -45,9 +45,3 @@ where
         (*self).decode_eof(src)
     }
 }
-
-pub trait Owner {
-    type Item;
-
-    fn own<'a, D: Decoder<'a>>(item: D::Item) -> Self::Item;
-}
