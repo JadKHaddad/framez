@@ -1,5 +1,5 @@
 [package]
-name = "cody-c-fuzz"
+name = "fraims-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
@@ -14,7 +14,7 @@ embedded-io-adapters = { version = "0.6.1", default-features = false, features =
     "tokio-1",
 ] }
 heapless = { version = "0.8.0", default-features = false }
-cody-c = { path = "../", default-features = false }
+fraims = { path = "../", default-features = false }
 
 [workspace]
 members = ["."]
@@ -35,8 +35,8 @@ test = false
 doc = false
 
 [[bin]]
-name = "stream"
-path = "fuzz_targets/stream.rs"
+name = "owned"
+path = "fuzz_targets/owned.rs"
 test = false
 doc = false
 

@@ -1,5 +1,3 @@
-//! Framed read stream. Transforms a [`Read`] into a stream of frames.
-
 use embedded_io_async::Read;
 use futures::Stream;
 
@@ -14,7 +12,7 @@ use crate::logging::Formatter;
 
 use super::State;
 
-/// A framer that reads frames from a [`Read`] source and decodes them using a [`Decoder`].
+/// A framer that reads bytes from a [`Read`] source and decodes them into frames using a [`Decoder`].
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedRead<'buf, D, R> {

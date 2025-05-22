@@ -1,5 +1,3 @@
-//! Framed write sink. Transforms an [`Write`] into a sink of frames.
-
 use embedded_io_async::Write;
 use futures::Sink;
 
@@ -57,7 +55,7 @@ impl<'buf> State<'buf> {
     }
 }
 
-/// A sink that writes encoded frames into an underlying writable sink using an [`Encoder`].
+/// A sink that writes encoded frames into an underlying [`Write`] sink using an [`Encoder`].
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedWrite<'buf, E, W> {

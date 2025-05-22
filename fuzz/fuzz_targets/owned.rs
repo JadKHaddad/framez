@@ -1,7 +1,7 @@
 //! If we panic!, we lose.
 //!
 //! ```not_rust
-//! cargo +nightly fuzz run stream
+//! cargo +nightly fuzz run owned
 //! ```
 
 #![no_main]

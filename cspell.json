@@ -4,10 +4,12 @@
     "words": [
         "clippy",
         "defmt",
+        "devcontainers",
         "docsrs",
         "fraims",
         "Haddad",
         "heapless",
+        "libfuzzer",
         "MSRV",
         "nextest",
         "rustdoc",

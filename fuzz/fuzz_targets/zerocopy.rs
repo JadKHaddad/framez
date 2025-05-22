@@ -3,7 +3,7 @@
 //! ```not_rust
 //! cargo +nightly fuzz run zerocopy -- -max_len=1022
 //! ```
-//! 1022 to leave room for '\r\n' (LinesCodec) and '#' (AnyDelimiterCodec).
+//! 1022 to leave room for '\r\n' (Lines) and '#' (Delimiter).
 //! The read/write buffers are 1024 bytes.
 
 #![no_main]
@@ -13,37 +13,34 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use cody_c::{
-    codec::{
-        any::AnyDelimiterCodec,
-        lines::{LinesCodec, StrLinesCodec},
-    },
-    decode::Decoder,
-    encode::Encoder,
-    FramedRead, FramedWrite, ReadError,
-};
 use embedded_io_adapters::tokio_1::FromTokio;
+use fraims::{
+    codec::{
+        delimiter::Delimiter,
+        lines::{Lines, StrLines},
+    },
+    decode::{DecodeError, Decoder},
+    encode::Encoder,
+    next, FramedRead, FramedWrite,
+};
 use libfuzzer_sys::fuzz_target;
 use tokio::runtime::Runtime;
 
 fuzz_target!(|data: &[u8]| {
     Runtime::new().expect("Runtime must build").block_on(async {
-        fuzz(
-            data,
-            AnyDelimiterCodec::new(b"#"),
-            AnyDelimiterCodec::new(b"#"),
-            |data| (!data.contains(&b'#')).then_some(data).ok_or(()),
-        )
+        fuzz(data, Delimiter::new(b"#"), Delimiter::new(b"#"), |data| {
+            (!data.contains(&b'#')).then_some(data).ok_or(())
+        })
         .await
         .unwrap();
 
-        fuzz(data, LinesCodec::new(), LinesCodec::new(), |data| {
+        fuzz(data, Lines::new(), Lines::new(), |data| {
             (!data.contains(&b'\n')).then_some(data).ok_or(())
         })
         .await
         .unwrap();
 
-        fuzz(data, StrLinesCodec::new(), StrLinesCodec::new(), |data| {
+        fuzz(data, StrLines::new(), StrLines::new(), |data| {
             (!data.contains(&b'\n')).then_some(data).ok_or(())?;
 
             str::from_utf8(data).map_err(|_| ())
@@ -53,7 +50,7 @@ fuzz_target!(|data: &[u8]| {
     });
 });
 
-// Note: ByteCodec can not be fuzzed like this
+// Note: Bytes can not be fuzzed like this
 async fn fuzz<'data, D, E, F, T>(
     data: &'data [u8],
     encoder: E,
@@ -65,7 +62,7 @@ where
     <E as Encoder<T>>::Error: Error + Display + 'static,
     D: for<'buf> Decoder<'buf> + 'static,
     for<'buf> <D as Decoder<'buf>>::Item: 'buf + Debug + PartialEq<T>,
-    for<'buf> <D as Decoder<'buf>>::Error: Error + Display + 'static,
+    <D as DecodeError>::Error: Error + Display + 'static,
     F: FnOnce(&'data [u8]) -> Result<T, ()>,
     T: 'data + Clone + Debug + PartialEq,
 {
@@ -82,19 +79,15 @@ where
     let mut framed_read = FramedRead::new(decoder, FromTokio::new(read), read_buf);
 
     let reader = async move {
-        loop {
-            match framed_read.read_frame().await {
-                Ok(None) => {}
-                Ok(Some(read_item)) => {
-                    assert_eq!(read_item, item_clone);
+        match next!(framed_read) {
+            Some(read_item) => {
+                let read_item = read_item?;
 
-                    return Ok(());
-                }
-                Err(err) => match err {
-                    ReadError::EOF => return Ok::<(), Box<dyn Error>>(()),
-                    _ => return Err(err.into()),
-                },
+                assert_eq!(read_item, item_clone);
+
+                Ok::<(), Box<dyn Error>>(())
             }
+            None => panic!("Should receive a frame"),
         }
     };
 
