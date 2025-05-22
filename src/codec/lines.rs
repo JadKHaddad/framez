@@ -122,16 +122,24 @@ impl From<Lines> for StrLines {
 
 /// Error returned by [`StrLines::decode`].
 #[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum StrLinesDecodeError {
     /// utf8 error.
     Utf8(core::str::Utf8Error),
 }
 
+#[cfg(feature = "defmt")]
+impl defmt::Format for StrLinesDecodeError {
+    fn format(&self, fmt: defmt::Formatter) {
+        match self {
+            StrLinesDecodeError::Utf8(_) => defmt::write!(fmt, "utf8 error"),
+        }
+    }
+}
+
 impl core::fmt::Display for StrLinesDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            StrLinesDecodeError::Utf8(err) => write!(f, "utf8 error: {}", err),
+            StrLinesDecodeError::Utf8(err) => write!(f, "utf8 error: {err}"),
         }
     }
 }
@@ -276,7 +284,7 @@ pub enum StringLinesDecodeError {
 impl core::fmt::Display for StringLinesDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            StringLinesDecodeError::Str(err) => write!(f, "str error: {}", err),
+            StringLinesDecodeError::Str(err) => write!(f, "str error: {err}"),
             StringLinesDecodeError::BufferTooSmall => write!(f, "buffer too small"),
         }
     }
@@ -311,8 +319,6 @@ impl<const N: usize> Encoder<String<N>> for StringLines<N> {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use std::vec::Vec;
 
     use futures::{SinkExt, StreamExt, pin_mut};

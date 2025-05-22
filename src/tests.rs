@@ -41,6 +41,7 @@ macro_rules! framed_read {
                     collected.push(item.into());
                 }
                 Err(_err) => {
+                    #[cfg(not(feature = "defmt"))]
                     crate::logging::error!("Error: {:?}", _err);
 
                     $(

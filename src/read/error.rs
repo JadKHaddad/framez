@@ -21,9 +21,9 @@ where
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::BufferTooSmall => write!(f, "Buffer too small"),
-            Self::IO(err) => write!(f, "IO error: {}", err),
+            Self::IO(err) => write!(f, "IO error: {err}"),
             Self::BytesRemainingOnStream => write!(f, "Bytes remaining on stream"),
-            Self::Decode(err) => write!(f, "Decode error: {}", err),
+            Self::Decode(err) => write!(f, "Decode error: {err}"),
         }
     }
 }

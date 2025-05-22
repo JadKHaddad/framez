@@ -27,8 +27,8 @@ where
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::IO(err) => write!(f, "IO error: {}", err),
-            Self::Encode(err) => write!(f, "Encode error: {}", err),
+            Self::IO(err) => write!(f, "IO error: {err}"),
+            Self::Encode(err) => write!(f, "Encode error: {err}"),
         }
     }
 }

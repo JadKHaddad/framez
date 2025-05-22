@@ -194,8 +194,6 @@ impl<const N: usize> Encoder<Vec<u8, N>> for OwnedDelimiter<'_, N> {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use std::vec::Vec;
 
     use futures::{SinkExt, StreamExt, pin_mut};
