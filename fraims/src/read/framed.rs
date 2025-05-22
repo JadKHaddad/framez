@@ -77,7 +77,7 @@ impl<'buf, D, R> FramedRead<'buf, D, R> {
     ///
     /// # Example
     ///
-    /// Convert bytes into a [`str`] frames
+    /// Convert bytes into [`str`] frames
     ///
     /// ```rust
     /// use core::{error::Error};
