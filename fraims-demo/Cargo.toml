@@ -1,0 +1,28 @@
+[package]
+name = "fraims-demo"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+fraims = { path = "../fraims" }
+tokio = { version = "1", features = ["full"] }
+embedded-io-adapters = { version = "0.6.1", default-features = false, features = [
+    "tokio-1",
+] }
+tracing = { version = "0.1.40", default-features = false }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+thiserror = "2"
+heapless = { version = "0.8.0", default-features = false, features = ["serde"] }
+serde = { version = "1.0.214", default-features = false, features = ["derive"] }
+zerocopy = { version = "0.8.1", features = ["derive"] }
+serde-json-core = { version = "0.6.0" }
+crc32fast = { version = "1.4.2", default-features = false }
+derive_more = { version = "2.0.1", default-features = false, features = [
+    "from",
+] }
+
+[[example]]
+name = "zerocopy-demo"
+path = "examples/zerocopy-demo.rs"
+required-features = []

@@ -14,7 +14,7 @@ embedded-io-adapters = { version = "0.6.1", default-features = false, features =
     "tokio-1",
 ] }
 heapless = { version = "0.8.0", default-features = false }
-fraims = { path = "../", default-features = false }
+fraims = { path = "../fraims", default-features = false }
 
 [workspace]
 members = ["."]

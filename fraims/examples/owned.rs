@@ -1,3 +1,7 @@
+//! ```not_rust
+//! cargo run --example owned
+//! ```
+
 use core::{error::Error, pin::pin};
 
 use embedded_io_adapters::tokio_1::FromTokio;

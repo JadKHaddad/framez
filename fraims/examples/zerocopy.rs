@@ -1,3 +1,7 @@
+//! ```not_rust
+//! cargo run --example zerocopy
+//! ```
+
 use core::error::Error;
 
 use embedded_io_adapters::tokio_1::FromTokio;

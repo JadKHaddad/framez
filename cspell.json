@@ -2,6 +2,7 @@
     "version": "0.2",
     "language": "en",
     "words": [
+        "byteorder",
         "clippy",
         "defmt",
         "devcontainers",
@@ -12,12 +13,17 @@
         "libfuzzer",
         "MSRV",
         "nextest",
+        "repr",
         "rustdoc",
+        "serde",
         "Swatinem",
         "taiki",
+        "thiserror",
         "zerocopy"
     ],
     "ignorePaths": [
-        "target"
+        "target",
+        "fuzz/corpus",
+        "fuzz/artifacts"
     ]
 }
