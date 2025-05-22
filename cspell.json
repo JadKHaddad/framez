@@ -2,13 +2,28 @@
     "version": "0.2",
     "language": "en",
     "words": [
+        "byteorder",
+        "clippy",
+        "defmt",
+        "devcontainers",
         "docsrs",
         "fraims",
         "Haddad",
+        "heapless",
+        "libfuzzer",
+        "MSRV",
+        "nextest",
+        "repr",
         "rustdoc",
+        "serde",
+        "Swatinem",
+        "taiki",
+        "thiserror",
         "zerocopy"
     ],
     "ignorePaths": [
-        "target"
+        "target",
+        "fuzz/corpus",
+        "fuzz/artifacts"
     ]
 }

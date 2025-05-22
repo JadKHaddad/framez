@@ -1,17 +1,4 @@
-[package]
-name = "fraims"
-version = "0.0.0"
-edition = "2024"
-rust-version = "1.85.1"
-authors = ["Jad K. Haddad <jadkhaddad@gmail.com>"]
-license = "MIT OR Apache-2.0"
-readme = "README.md"
-description = "A simple and zerocopy codec for encoding and decoding data in no_std environments."
-repository = "https://github.com/JadKHaddad/fraims"
-keywords = ["codec", "no_std", "embedded", "encode", "decode"]
-
-[dependencies]
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+[workspace]
+resolver = "2"
+members = ["fraims-demo", "fraims"]
+default-members = ["fraims"]
