@@ -1,5 +1,5 @@
 use embedded_io_async::{Read, Write};
-use futures::Stream;
+use futures::{Sink, Stream};
 
 use crate::{
     ReadError, WriteError,
@@ -111,13 +111,32 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
     {
         self.core.send(item).await
     }
+
+    pub fn sink<'this, I>(
+        &'this mut self,
+    ) -> impl Sink<I, Error = WriteError<RW::Error, C::Error>> + 'this
+    where
+        I: 'this,
+        C: Encoder<I>,
+        RW: Write,
+    {
+        self.core.sink()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use embedded_io_adapters::tokio_1::FromTokio;
+    use core::{pin::pin, str::FromStr};
+    use std::string::String;
 
-    use crate::{Framed, codec::lines::StrLines, next};
+    use embedded_io_adapters::tokio_1::FromTokio;
+    use futures::{SinkExt, StreamExt};
+
+    use crate::{
+        Framed,
+        codec::lines::{StrLines, StringLines},
+        next,
+    };
 
     #[tokio::test]
     #[ignore = "assert that next! macro works on Framed"]
@@ -132,5 +151,58 @@ mod tests {
         while let Some(_) = next!(framed) {}
 
         _ = framed.send("Line").await;
+    }
+
+    #[tokio::test]
+    #[ignore = "assert that stream_mapped() works on Framed"]
+    async fn assert_stream_mapped() {
+        let (stream, _) = tokio::io::duplex(1024);
+
+        let read_buf = &mut [0u8; 1024];
+        let write_buf = &mut [0u8; 1024];
+
+        let mut framed = Framed::new(StrLines::new(), FromTokio::new(stream), read_buf, write_buf);
+
+        let stream = framed.stream_mapped(String::from_str);
+        let mut stream = pin!(stream);
+
+        while let Some(_) = stream.next().await {}
+    }
+
+    #[tokio::test]
+    #[ignore = "assert that stream() works on Framed"]
+    async fn assert_stream() {
+        let (stream, _) = tokio::io::duplex(1024);
+
+        let read_buf = &mut [0u8; 1024];
+        let write_buf = &mut [0u8; 1024];
+
+        let mut framed = Framed::new(
+            StringLines::<10>::new(),
+            FromTokio::new(stream),
+            read_buf,
+            write_buf,
+        );
+
+        let stream = framed.stream();
+        let mut stream = pin!(stream);
+
+        while let Some(_) = stream.next().await {}
+    }
+
+    #[tokio::test]
+    #[ignore = "assert that sink() works on Framed"]
+    async fn assert_sink() {
+        let (stream, _) = tokio::io::duplex(1024);
+
+        let read_buf = &mut [0u8; 1024];
+        let write_buf = &mut [0u8; 1024];
+
+        let mut framed = Framed::new(StrLines::new(), FromTokio::new(stream), read_buf, write_buf);
+
+        let sink = framed.sink();
+        let mut sink = pin!(sink);
+
+        _ = sink.send("Line").await;
     }
 }

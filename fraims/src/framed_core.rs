@@ -455,7 +455,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         I: 'this,
         C: Encoder<I>,
         RW: Write,
-        S: for<'a> BorrowMut<WriteState<'a>>,
+        S: BorrowMut<WriteState<'buf>>,
     {
         futures::sink::unfold(self, |this, item: I| async move {
             this.send(item).await?;
