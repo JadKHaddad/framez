@@ -27,11 +27,15 @@ pub mod codec;
 pub mod decode;
 pub mod encode;
 
+mod framed_impl;
+
 mod read;
 pub use read::{error::ReadError, framed::FramedRead, owned::FramedReadOwned};
 
 mod write;
 pub use write::{FramedWrite, WriteError};
+
+mod state;
 
 pub(crate) mod logging;
 

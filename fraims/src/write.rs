@@ -42,12 +42,12 @@ where
 
 /// Internal state for writing a frame.
 #[derive(Debug)]
-struct State<'buf> {
+pub struct WriteState<'buf> {
     /// The underlying buffer to write to.
-    buffer: &'buf mut [u8],
+    pub buffer: &'buf mut [u8],
 }
 
-impl<'buf> State<'buf> {
+impl<'buf> WriteState<'buf> {
     /// Creates a new [`WriteFrame`].
     #[inline]
     const fn new(buffer: &'buf mut [u8]) -> Self {
@@ -59,7 +59,7 @@ impl<'buf> State<'buf> {
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedWrite<'buf, E, W> {
-    state: State<'buf>,
+    state: WriteState<'buf>,
     encoder: E,
     writer: W,
 }
@@ -69,7 +69,7 @@ impl<'buf, E, W> FramedWrite<'buf, E, W> {
     #[inline]
     pub fn new(encoder: E, writer: W, buffer: &'buf mut [u8]) -> Self {
         Self {
-            state: State::new(buffer),
+            state: WriteState::new(buffer),
             encoder,
             writer,
         }

@@ -1,6 +1,6 @@
 /// Internal state for reading a frame.
 #[derive(Debug)]
-pub struct State<'buf> {
+pub struct ReadState<'buf> {
     /// The current index in the buffer.
     ///
     /// Represents the number of bytes read into the buffer.
@@ -19,7 +19,7 @@ pub struct State<'buf> {
     pub buffer: &'buf mut [u8],
 }
 
-impl<'buf> State<'buf> {
+impl<'buf> ReadState<'buf> {
     #[inline]
     pub const fn new(buffer: &'buf mut [u8]) -> Self {
         Self {

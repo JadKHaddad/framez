@@ -4,4 +4,4 @@ mod next;
 pub(super) mod owned;
 mod state;
 
-use state::State;
+pub(super) use state::ReadState;

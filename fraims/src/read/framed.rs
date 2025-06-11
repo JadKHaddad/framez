@@ -10,13 +10,13 @@ use crate::{
 #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
 use crate::logging::Formatter;
 
-use super::State;
+use super::ReadState;
 
 /// A framer that reads bytes from a [`Read`] source and decodes them into frames using a [`Decoder`].
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedRead<'buf, D, R> {
-    state: State<'buf>,
+    state: ReadState<'buf>,
     decoder: D,
     reader: R,
 }
@@ -26,7 +26,7 @@ impl<'buf, D, R> FramedRead<'buf, D, R> {
     #[inline]
     pub fn new(decoder: D, reader: R, buffer: &'buf mut [u8]) -> Self {
         Self {
-            state: State::new(buffer),
+            state: ReadState::new(buffer),
             decoder,
             reader,
         }
