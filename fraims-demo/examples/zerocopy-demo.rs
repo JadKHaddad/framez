@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         for packet in packets {
             tracing::info!(target: "writer", ?packet, "sending packet");
 
-            framed_write.send_frame(packet).await?;
+            framed_write.send(packet).await?;
         }
 
         Ok::<(), Box<dyn Error>>(())

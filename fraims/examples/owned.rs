@@ -6,7 +6,7 @@ use core::{error::Error, pin::pin};
 
 use embedded_io_adapters::tokio_1::FromTokio;
 use fraims::{
-    FramedReadOwned, FramedWrite,
+    FramedRead, FramedWrite,
     codec::lines::{StrLines, StringLines},
 };
 use futures::{SinkExt, StreamExt};
@@ -20,8 +20,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (read, write) = tokio::io::duplex(1024);
 
     let read_buf = &mut [0u8; 1024];
-    let mut framed_read =
-        FramedReadOwned::new(StringLines::<32>::new(), FromTokio::new(read), read_buf);
+    let mut framed_read = FramedRead::new(StringLines::<32>::new(), FromTokio::new(read), read_buf);
 
     let reader = async move {
         let stream = framed_read.stream();

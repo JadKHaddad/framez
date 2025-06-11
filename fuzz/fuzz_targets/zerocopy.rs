@@ -95,7 +95,7 @@ where
     let mut framed_write = FramedWrite::new(encoder, FromTokio::new(write), write_buf);
 
     let writer = async move {
-        framed_write.send_frame(item).await?;
+        framed_write.send(item).await?;
 
         Ok::<(), Box<dyn Error>>(())
     };

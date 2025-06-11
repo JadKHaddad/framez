@@ -27,13 +27,20 @@ pub mod codec;
 pub mod decode;
 pub mod encode;
 
-mod read;
-pub use read::{error::ReadError, framed::FramedRead, owned::FramedReadOwned};
+mod framed;
+pub use framed::{Framed, FramedRead, FramedWrite};
 
-mod write;
-pub use write::{FramedWrite, WriteError};
+mod framed_core;
+use framed_core::FramedCore;
+
+mod error;
+pub use error::{ReadError, WriteError};
+
+mod state;
 
 pub(crate) mod logging;
+
+mod next;
 
 #[doc(hidden)]
 pub mod mock;
