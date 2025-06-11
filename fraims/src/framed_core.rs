@@ -1,4 +1,4 @@
-use core::borrow::BorrowMut;
+use core::{borrow::BorrowMut, marker::PhantomData};
 
 use embedded_io_async::{Read, Write};
 use futures::{Sink, Stream};
@@ -16,19 +16,52 @@ use crate::{
 use crate::logging::Formatter;
 
 #[derive(Debug)]
-pub struct FramedImpl<C, RW, S> {
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct FramedCore<'buf, C, RW, S> {
     codec: C,
     read_write: RW,
     state: S,
+    buf: PhantomData<&'buf ()>,
 }
 
-impl<C, RW, S> FramedImpl<C, RW, S> {
+impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
     pub fn new(codec: C, read_write: RW, state: S) -> Self {
         Self {
             codec,
             read_write,
             state,
+            buf: PhantomData,
         }
+    }
+
+    /// Returns reference to the codec.
+    #[inline]
+    pub const fn codec(&self) -> &C {
+        &self.codec
+    }
+
+    /// Returns mutable reference to the codec.
+    #[inline]
+    pub fn codec_mut(&mut self) -> &mut C {
+        &mut self.codec
+    }
+
+    /// Returns reference to the reader/writer.
+    #[inline]
+    pub const fn inner(&self) -> &RW {
+        &self.read_write
+    }
+
+    /// Returns mutable reference to the reader/writer.
+    #[inline]
+    pub fn inner_mut(&mut self) -> &mut RW {
+        &mut self.read_write
+    }
+
+    /// Consumes the [`FramedCore`] and returns the `codec` and `reader/writer`.
+    #[inline]
+    pub fn into_parts(self) -> (C, RW) {
+        (self.codec, self.read_write)
     }
 
     pub async fn maybe_next<'this>(
@@ -37,7 +70,7 @@ impl<C, RW, S> FramedImpl<C, RW, S> {
     where
         C: Decoder<'this>,
         RW: Read,
-        S: BorrowMut<ReadState<'this>>,
+        S: BorrowMut<ReadState<'buf>>,
     {
         let state: &mut ReadState = self.state.borrow_mut();
 
@@ -181,15 +214,15 @@ impl<C, RW, S> FramedImpl<C, RW, S> {
         }
     }
 
-    pub fn stream<U>(
+    pub fn stream_mapped<U>(
         &mut self,
         map: fn(<C as Decoder<'_>>::Item) -> U,
     ) -> impl Stream<Item = Result<U, ReadError<RW::Error, C::Error>>> + '_
     where
+        U: 'static,
         C: for<'a> Decoder<'a>,
         RW: Read,
-        S: for<'a> BorrowMut<ReadState<'a>>,
-        U: 'static,
+        S: BorrowMut<ReadState<'buf>>,
     {
         futures::stream::unfold((self, false), move |(this, errored)| async move {
             if errored {
@@ -206,11 +239,11 @@ impl<C, RW, S> FramedImpl<C, RW, S> {
         })
     }
 
-    pub async fn next_owned(&mut self) -> Option<Result<C::Item, ReadError<RW::Error, C::Error>>>
+    pub async fn next(&mut self) -> Option<Result<C::Item, ReadError<RW::Error, C::Error>>>
     where
         C: OwnedDecoder,
         RW: Read,
-        S: for<'a> BorrowMut<ReadState<'a>>,
+        S: BorrowMut<ReadState<'buf>>,
     {
         loop {
             let state: &mut ReadState = self.state.borrow_mut();
@@ -354,20 +387,20 @@ impl<C, RW, S> FramedImpl<C, RW, S> {
         }
     }
 
-    pub fn stream_owned(
-        &mut self,
-    ) -> impl Stream<Item = Result<C::Item, ReadError<RW::Error, C::Error>>> + '_
+    pub fn stream(
+        &'buf mut self,
+    ) -> impl Stream<Item = Result<C::Item, ReadError<RW::Error, C::Error>>> + 'buf
     where
         C: OwnedDecoder,
         RW: Read,
-        S: for<'a> BorrowMut<ReadState<'a>>,
+        S: BorrowMut<ReadState<'buf>>,
     {
         futures::stream::unfold((self, false), |(this, errored)| async move {
             if errored {
                 return None;
             }
 
-            match this.next_owned().await {
+            match this.next().await {
                 Some(Ok(item)) => Some((Ok(item), (this, false))),
                 Some(Err(err)) => Some((Err(err), (this, true))),
                 None => None,
@@ -379,7 +412,7 @@ impl<C, RW, S> FramedImpl<C, RW, S> {
     where
         C: Encoder<I>,
         RW: Write,
-        S: for<'a> BorrowMut<WriteState<'a>>,
+        S: BorrowMut<WriteState<'buf>>,
     {
         let state: &mut WriteState = self.state.borrow_mut();
 

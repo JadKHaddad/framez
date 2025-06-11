@@ -9,7 +9,7 @@ pub struct ReadWriteState<'buf> {
 }
 
 impl<'buf> ReadWriteState<'buf> {
-    const fn new(read: ReadState<'buf>, write: WriteState<'buf>) -> Self {
+    pub const fn new(read: ReadState<'buf>, write: WriteState<'buf>) -> Self {
         Self { read, write }
     }
 }

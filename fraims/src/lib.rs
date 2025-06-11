@@ -27,7 +27,8 @@ pub mod codec;
 pub mod decode;
 pub mod encode;
 
-mod framed_impl;
+mod framed;
+mod framed_core;
 
 mod read;
 pub use read::{error::ReadError, framed::FramedRead, owned::FramedReadOwned};
