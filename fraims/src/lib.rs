@@ -28,15 +28,15 @@ pub mod decode;
 pub mod encode;
 
 mod framed;
-pub use framed::Framed;
+pub use framed::{Framed, FramedRead, FramedWrite};
 
 mod framed_core;
 
 mod read;
-pub use read::{error::ReadError, framed::FramedRead, owned::FramedReadOwned};
+pub use read::error::ReadError;
 
 mod write;
-pub use write::{FramedWrite, WriteError};
+pub use write::WriteError;
 
 mod state;
 

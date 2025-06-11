@@ -388,8 +388,8 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
     }
 
     pub fn stream(
-        &'buf mut self,
-    ) -> impl Stream<Item = Result<C::Item, ReadError<RW::Error, C::Error>>> + 'buf
+        &mut self,
+    ) -> impl Stream<Item = Result<C::Item, ReadError<RW::Error, C::Error>>> + '_
     where
         C: OwnedDecoder,
         RW: Read,

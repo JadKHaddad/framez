@@ -80,7 +80,7 @@ macro_rules! sink_stream {
         });
 
         let buffer = &mut [0_u8; 1024];
-        let mut framer = crate::FramedReadOwned::new(
+        let mut framer = crate::FramedRead::new(
             $decoder,
             embedded_io_adapters::tokio_1::FromTokio::new(read),
             buffer,

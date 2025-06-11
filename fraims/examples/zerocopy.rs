@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         for item in items {
             tracing::info!(target: "writer", item, "sending frame");
 
-            framed_write.send_frame(item).await?;
+            framed_write.send(item).await?;
         }
 
         Ok::<(), Box<dyn Error>>(())
