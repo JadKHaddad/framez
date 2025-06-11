@@ -1,4 +1,4 @@
-/// Calls [`FramedRead::maybe_next`](crate::FramedRead::maybe_next) in a loop until a frame is returned or an error occurs.
+/// Calls [`Framed::maybe_next`](crate::Framed::maybe_next) in a loop until a frame is returned or an error occurs.
 ///
 /// # Return value
 ///

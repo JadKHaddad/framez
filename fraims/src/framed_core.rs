@@ -8,8 +8,7 @@ use crate::{
     decode::{Decoder, OwnedDecoder},
     encode::Encoder,
     logging::{debug, error, trace, warn},
-    read::ReadState,
-    write::WriteState,
+    state::{ReadState, WriteState},
 };
 
 #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]

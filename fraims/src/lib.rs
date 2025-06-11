@@ -20,7 +20,7 @@
 #![no_std]
 #![deny(unsafe_code)]
 #![deny(missing_debug_implementations)]
-// #![deny(missing_docs)] // TODO: restore
+#![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod codec;
@@ -31,16 +31,16 @@ mod framed;
 pub use framed::{Framed, FramedRead, FramedWrite};
 
 mod framed_core;
+use framed_core::FramedCore;
 
-mod read;
-pub use read::error::ReadError;
-
-mod write;
-pub use write::WriteError;
+mod error;
+pub use error::{ReadError, WriteError};
 
 mod state;
 
 pub(crate) mod logging;
+
+mod next;
 
 #[doc(hidden)]
 pub mod mock;
