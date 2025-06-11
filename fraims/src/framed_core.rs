@@ -17,11 +17,11 @@ use crate::logging::Formatter;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct FramedCore<'buf, C, RW, S> {
+pub struct FramedCore<'this, C, RW, S> {
     codec: C,
     read_write: RW,
     state: S,
-    buf: PhantomData<&'buf ()>,
+    buf: PhantomData<&'this ()>,
 }
 
 impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {

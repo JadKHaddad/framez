@@ -64,11 +64,11 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         self.core.into_parts()
     }
 
-    pub async fn maybe_next(
-        &'buf mut self,
+    pub async fn maybe_next<'this>(
+        &'this mut self,
     ) -> Option<Result<Option<C::Item>, ReadError<RW::Error, C::Error>>>
     where
-        C: Decoder<'buf>,
+        C: Decoder<'this>,
         RW: Read,
     {
         self.core.maybe_next().await
@@ -110,5 +110,27 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         RW: Write,
     {
         self.core.send(item).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use embedded_io_adapters::tokio_1::FromTokio;
+
+    use crate::{Framed, codec::lines::StrLines, next};
+
+    #[tokio::test]
+    #[ignore = "assert that next! macro works on Framed"]
+    async fn assert_next() {
+        let (stream, _) = tokio::io::duplex(1024);
+
+        let read_buf = &mut [0u8; 1024];
+        let write_buf = &mut [0u8; 1024];
+
+        let mut framed = Framed::new(StrLines::new(), FromTokio::new(stream), read_buf, write_buf);
+
+        while let Some(_) = next!(framed) {}
+
+        _ = framed.send("Line").await;
     }
 }
