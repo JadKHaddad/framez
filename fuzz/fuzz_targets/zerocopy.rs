@@ -14,7 +14,7 @@ use std::{
 };
 
 use embedded_io_adapters::tokio_1::FromTokio;
-use fraims::{
+use framez::{
     codec::{
         delimiter::Delimiter,
         lines::{Lines, StrLines},

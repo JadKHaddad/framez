@@ -1,13 +1,13 @@
 [package]
-name = "fraims"
-version = "0.2.0"
+name = "framez"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.85.1"
 authors = ["Jad K. Haddad <jadkhaddad@gmail.com>"]
 license = "MIT OR Apache-2.0"
 readme = "../README.md"
 description = "A zerocopy codec for encoding and decoding data in no_std environments."
-repository = "https://github.com/JadKHaddad/fraims"
+repository = "https://github.com/JadKHaddad/framez"
 keywords = ["codec", "no_std", "embedded", "encode", "decode"]
 
 [features]

@@ -84,7 +84,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
     /// ```rust
     /// use core::{error::Error};
     ///
-    /// use fraims::{Framed, codec::lines::StrLines, mock::Noop, next};  
+    /// use framez::{Framed, codec::lines::StrLines, mock::Noop, next};  
     ///
     /// async fn read() -> Result<(), Box<dyn Error>> {
     ///     let r_buf = &mut [0u8; 1024];
@@ -118,7 +118,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
     /// ```rust
     /// use core::{error::Error, pin::pin, str::FromStr};
     ///
-    /// use fraims::{Framed, codec::lines::StrLines, mock::Noop};  
+    /// use framez::{Framed, codec::lines::StrLines, mock::Noop};  
     /// use futures::StreamExt;
     ///
     /// async fn read() -> Result<(), Box<dyn Error>> {

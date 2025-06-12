@@ -1,6 +1,6 @@
 //! Packet codec implementation module.
 
-use fraims::{
+use framez::{
     decode::{DecodeError, Decoder},
     encode::Encoder,
 };
@@ -41,7 +41,7 @@ impl<'buf> Encoder<Packet<'buf>> for PacketCodec {
 #[cfg(test)]
 mod test {
     use embedded_io_adapters::tokio_1::FromTokio;
-    use fraims::{FramedRead, next};
+    use framez::{FramedRead, next};
     use tokio::io::AsyncWriteExt;
 
     use crate::{

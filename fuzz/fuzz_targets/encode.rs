@@ -6,7 +6,7 @@
 
 #![no_main]
 
-use fraims::{
+use framez::{
     codec::{
         bytes::{Bytes, OwnedBytes},
         delimiter::{Delimiter, OwnedDelimiter},

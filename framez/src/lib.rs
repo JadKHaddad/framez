@@ -1,4 +1,4 @@
-//! # Fraims
+//! # framez
 //!
 //! A `zerocopy` codec for encoding and decoding data in `no_std` environments.
 //!

@@ -1,12 +1,12 @@
 //! ```not_rust
-//! cargo run -p fraims-demo --example zerocopy-demo
+//! cargo run -p framez-demo --example zerocopy-demo
 //! ```
 
 use core::error::Error;
 
 use embedded_io_adapters::tokio_1::FromTokio;
-use fraims::{FramedRead, FramedWrite, next};
-use fraims_demo::{
+use framez::{FramedRead, FramedWrite, next};
+use framez_demo::{
     codec::PacketCodec,
     packet::Packet,
     payload_content::{DeviceConfig, DeviceConfigAck, Heartbeat, HeartbeatAck, Init, InitAck},

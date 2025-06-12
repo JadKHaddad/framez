@@ -1,11 +1,11 @@
-# Fraims
+# framez
 
-![Build Status](https://github.com/JadKHaddad/fraims/actions/workflows/build-and-test.yml/badge.svg)
-[![crates.io](https://img.shields.io/crates/v/fraims.svg)](https://crates.io/crates/fraims)
-[![Crates.io (MSRV)](https://img.shields.io/crates/msrv/fraims)](https://crates.io/crates/fraims)
-[![docs.rs](https://docs.rs/fraims/badge.svg)](https://docs.rs/fraims)
-[![Crates.io (Downloads)](https://img.shields.io/crates/d/fraims)](https://crates.io/crates/fraims)
-[![Crates.io (License)](https://img.shields.io/crates/l/fraims)](https://crates.io/crates/fraims)
+![Build Status](https://github.com/JadKHaddad/framez/actions/workflows/build-and-test.yml/badge.svg)
+[![crates.io](https://img.shields.io/crates/v/framez.svg)](https://crates.io/crates/framez)
+[![Crates.io (MSRV)](https://img.shields.io/crates/msrv/framez)](https://crates.io/crates/framez)
+[![docs.rs](https://docs.rs/framez/badge.svg)](https://docs.rs/framez)
+[![Crates.io (Downloads)](https://img.shields.io/crates/d/framez)](https://crates.io/crates/framez)
+[![Crates.io (License)](https://img.shields.io/crates/l/framez)](https://crates.io/crates/framez)
 
 A `zerocopy` codec for encoding and decoding data in `no_std` environments.
 

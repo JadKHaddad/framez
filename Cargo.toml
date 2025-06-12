@@ -1,4 +1,4 @@
 [workspace]
 resolver = "2"
-members = ["fraims-demo", "fraims"]
-default-members = ["fraims"]
+members = ["framez-demo", "framez"]
+default-members = ["framez"]

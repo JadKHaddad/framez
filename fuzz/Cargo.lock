@@ -106,7 +106,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fraims"
+name = "framez"
 version = "0.1.0"
 dependencies = [
  "embedded-io-async",
@@ -115,11 +115,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "fraims-fuzz"
+name = "framez-fuzz"
 version = "0.0.0"
 dependencies = [
  "embedded-io-adapters",
- "fraims",
+ "framez",
  "heapless",
  "libfuzzer-sys",
  "tokio",

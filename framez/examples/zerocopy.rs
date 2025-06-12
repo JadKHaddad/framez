@@ -1,15 +1,11 @@
 //! ```not_rust
-//! cargo run --example owned
+//! cargo run --example zerocopy
 //! ```
 
-use core::{error::Error, pin::pin};
+use core::error::Error;
 
 use embedded_io_adapters::tokio_1::FromTokio;
-use fraims::{
-    FramedRead, FramedWrite,
-    codec::lines::{StrLines, StringLines},
-};
-use futures::{SinkExt, StreamExt};
+use framez::{FramedRead, FramedWrite, codec::lines::StrLines, next};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -20,14 +16,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (read, write) = tokio::io::duplex(1024);
 
     let read_buf = &mut [0u8; 1024];
-    let mut framed_read = FramedRead::new(StringLines::<32>::new(), FromTokio::new(read), read_buf);
+    let mut framed_read = FramedRead::new(StrLines::new(), FromTokio::new(read), read_buf);
 
     let reader = async move {
-        let stream = framed_read.stream();
-        let mut stream = pin!(stream);
-
-        while let Some(item) = stream.next().await.transpose()? {
-            tracing::info!(target: "reader", %item, "received frame")
+        while let Some(item) = next!(framed_read).transpose()? {
+            tracing::info!(target: "reader", item, "received frame")
         }
 
         Ok::<(), Box<dyn Error>>(())
@@ -39,13 +32,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let writer = async move {
         let items = ["Hello, world!", "How are you?", "Goodbye!"];
 
-        let sink = framed_write.sink();
-        let mut sink = pin!(sink);
-
         for item in items {
-            tracing::info!(target: "writer", %item, "sending frame");
+            tracing::info!(target: "writer", item, "sending frame");
 
-            sink.send(item).await?;
+            framed_write.send(item).await?;
         }
 
         Ok::<(), Box<dyn Error>>(())
