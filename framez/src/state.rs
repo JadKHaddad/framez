@@ -34,6 +34,16 @@ impl<'buf> ReadState<'buf> {
         }
     }
 
+    #[inline]
+    pub const fn reset(self) -> Self {
+        Self::new(self.buffer)
+    }
+
+    #[inline]
+    pub const fn empty() -> Self {
+        Self::new(&mut [])
+    }
+
     /// Returns the number of bytes that can be framed.
     #[inline]
     #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
@@ -55,6 +65,16 @@ impl<'buf> WriteState<'buf> {
     pub const fn new(buffer: &'buf mut [u8]) -> Self {
         Self { buffer }
     }
+
+    #[inline]
+    pub const fn reset(self) -> Self {
+        Self::new(self.buffer)
+    }
+
+    #[inline]
+    pub const fn empty() -> Self {
+        Self::new(&mut [])
+    }
 }
 
 #[derive(Debug)]
@@ -64,8 +84,14 @@ pub struct ReadWriteState<'buf> {
 }
 
 impl<'buf> ReadWriteState<'buf> {
+    #[inline]
     pub const fn new(read: ReadState<'buf>, write: WriteState<'buf>) -> Self {
         Self { read, write }
+    }
+
+    #[inline]
+    pub const fn reset(self) -> Self {
+        Self::new(self.read.reset(), self.write.reset())
     }
 }
 
