@@ -58,10 +58,18 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         self.core.inner_mut()
     }
 
-    /// Consumes the [`Framed`] and returns the `codec` and `reader/writer`.
+    /// Consumes the [`Framed`] and returns the `codec` and `reader/writer` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, RW) {
+    pub fn into_parts(self) -> (C, RW, ReadWriteState<'buf>) {
         self.core.into_parts()
+    }
+
+    #[inline]
+    /// Creates a new [`Framed`] from its parts.
+    pub const fn from_parts(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(codec, read_write, state),
+        }
     }
 
     /// Tries to read a frame from the underlying reader.
@@ -237,10 +245,18 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
         self.core.inner_mut()
     }
 
-    /// Consumes the [`FramedRead`] and returns the `codec` and `reader`.
+    /// Consumes the [`FramedRead`] and returns the `codec` and `reader` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, R) {
+    pub fn into_parts(self) -> (C, R, ReadState<'buf>) {
         self.core.into_parts()
+    }
+
+    #[inline]
+    /// Creates a new [`FramedRead`] from its parts.
+    pub const fn from_parts(codec: C, read: R, state: ReadState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(codec, read, state),
+        }
     }
 
     /// See [`Framed::maybe_next`].
@@ -328,10 +344,18 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
         self.core.inner_mut()
     }
 
-    /// Consumes the [`FramedWrite`] and returns the `codec` and `writer`.
+    /// Consumes the [`FramedWrite`] and returns the `codec` and `writer` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, W) {
+    pub fn into_parts(self) -> (C, W, WriteState<'buf>) {
         self.core.into_parts()
+    }
+
+    #[inline]
+    /// Creates a new [`FramedWrite`] from its parts.
+    pub const fn from_parts(codec: C, write: W, state: WriteState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(codec, write, state),
+        }
     }
 
     /// See [`Framed::send`].

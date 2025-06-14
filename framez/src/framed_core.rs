@@ -57,10 +57,21 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         &mut self.read_write
     }
 
-    /// Consumes the [`FramedCore`] and returns the `codec` and `reader/writer`.
+    /// Consumes the [`FramedCore`] and returns the `codec` and `reader/writer` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, RW) {
-        (self.codec, self.read_write)
+    pub fn into_parts(self) -> (C, RW, S) {
+        (self.codec, self.read_write, self.state)
+    }
+
+    #[inline]
+    /// Creates a new [`FramedCore`] from its parts.
+    pub const fn from_parts(codec: C, read_write: RW, state: S) -> Self {
+        Self {
+            codec,
+            read_write,
+            state,
+            buf: PhantomData,
+        }
     }
 
     pub async fn maybe_next<'this>(

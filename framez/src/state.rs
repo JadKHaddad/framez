@@ -50,7 +50,7 @@ pub struct WriteState<'buf> {
 }
 
 impl<'buf> WriteState<'buf> {
-    /// Creates a new [`WriteFrame`].
+    /// Creates a new [`WriteState`].
     #[inline]
     pub const fn new(buffer: &'buf mut [u8]) -> Self {
         Self { buffer }
@@ -59,8 +59,8 @@ impl<'buf> WriteState<'buf> {
 
 #[derive(Debug)]
 pub struct ReadWriteState<'buf> {
-    read: ReadState<'buf>,
-    write: WriteState<'buf>,
+    pub read: ReadState<'buf>,
+    pub write: WriteState<'buf>,
 }
 
 impl<'buf> ReadWriteState<'buf> {
