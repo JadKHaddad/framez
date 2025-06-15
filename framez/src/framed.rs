@@ -72,6 +72,12 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         }
     }
 
+    /// Returns the number of bytes that can be framed.
+    #[inline]
+    pub fn framable(&self) -> usize {
+        self.core.framable()
+    }
+
     /// Tries to read a frame from the underlying reader.
     ///
     /// # Return value

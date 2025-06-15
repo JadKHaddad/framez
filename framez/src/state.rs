@@ -46,7 +46,6 @@ impl<'buf> ReadState<'buf> {
 
     /// Returns the number of bytes that can be framed.
     #[inline]
-    #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
     pub const fn framable(&self) -> usize {
         self.index - self.total_consumed
     }

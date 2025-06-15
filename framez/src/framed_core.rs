@@ -1,4 +1,7 @@
-use core::{borrow::BorrowMut, marker::PhantomData};
+use core::{
+    borrow::{Borrow, BorrowMut},
+    marker::PhantomData,
+};
 
 use embedded_io_async::{Read, Write};
 use futures::{Sink, Stream};
@@ -72,6 +75,15 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
             state,
             buf: PhantomData,
         }
+    }
+
+    /// Returns the number of bytes that can be framed.
+    #[inline]
+    pub fn framable(&self) -> usize
+    where
+        S: Borrow<ReadState<'buf>>,
+    {
+        self.state.borrow().framable()
     }
 
     pub async fn maybe_next<'this>(
