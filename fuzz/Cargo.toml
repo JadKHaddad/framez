@@ -41,6 +41,13 @@ test = false
 doc = false
 
 [[bin]]
+name = "zerocopy_incoming"
+path = "fuzz_targets/zerocopy_incoming.rs"
+test = false
+doc = false
+
+
+[[bin]]
 name = "zerocopy"
 path = "fuzz_targets/zerocopy.rs"
 test = false
