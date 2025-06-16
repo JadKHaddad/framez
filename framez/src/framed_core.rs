@@ -17,6 +17,12 @@ use crate::{
 #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
 use crate::logging::Formatter;
 
+#[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
+const READ: &str = "framez::read";
+
+#[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
+const WRITE: &str = "framez::write";
+
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedCore<'this, C, RW, S> {
@@ -96,7 +102,10 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
     {
         let state: &mut ReadState = self.state.borrow_mut();
 
+        trace!(target: READ, "maybe_next called");
+
         debug!(
+            target: READ,
             "total_consumed: {}, index: {}, buffer: {:?}",
             state.total_consumed,
             state.index,
@@ -111,7 +120,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
             state.index -= state.total_consumed;
             state.total_consumed = 0;
 
-            debug!("Buffer shifted. copied: {}", state.framable());
+            trace!(target: READ, "Buffer shifted. copied: {}", state.framable());
 
             state.shift = false;
 
@@ -120,7 +129,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
 
         if state.is_framable {
             if state.eof {
-                trace!("Framing on EOF");
+                trace!(target: READ, "Framing on EOF");
 
                 match self
                     .codec
@@ -130,6 +139,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                         state.total_consumed += size;
 
                         debug!(
+                            target: READ,
                             "Frame decoded, consumed: {}, total_consumed: {}",
                             size, state.total_consumed,
                         );
@@ -137,12 +147,12 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                         return Some(Ok(Some(item)));
                     }
                     Ok(None) => {
-                        debug!("No frame decoded");
+                        debug!(target: READ, "No frame decoded");
 
                         state.is_framable = false;
 
                         if state.index != state.total_consumed {
-                            error!("Bytes remaining on stream");
+                            error!(target: READ, "Bytes remaining on stream");
 
                             return Some(Err(ReadError::BytesRemainingOnStream));
                         }
@@ -150,14 +160,14 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                         return None;
                     }
                     Err(err) => {
-                        error!("Failed to decode frame");
+                        error!(target: READ, "Failed to decode frame");
 
                         return Some(Err(ReadError::Decode(err)));
                     }
                 };
             }
 
-            trace!("Framing");
+            trace!(target: READ, "Framing");
 
             #[cfg(not(feature = "buffer-early-shift"))]
             let buf_len = state.buffer.len();
@@ -170,6 +180,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                     state.total_consumed += size;
 
                     debug!(
+                        target: READ,
                         "Frame decoded, consumed: {}, total_consumed: {}",
                         size, state.total_consumed,
                     );
@@ -177,7 +188,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                     return Some(Ok(Some(item)));
                 }
                 Ok(None) => {
-                    debug!("No frame decoded");
+                    debug!(target: READ, "No frame decoded");
 
                     #[cfg(feature = "buffer-early-shift")]
                     {
@@ -194,7 +205,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                     return Some(Ok(None));
                 }
                 Err(err) => {
-                    error!("Failed to decode frame");
+                    error!(target: READ, "Failed to decode frame");
 
                     return Some(Err(ReadError::Decode(err)));
                 }
@@ -202,21 +213,21 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         }
 
         if state.index >= state.buffer.len() {
-            error!("Buffer too small");
+            error!(target: READ, "Buffer too small");
 
             return Some(Err(ReadError::BufferTooSmall));
         }
 
-        trace!("Reading");
+        trace!(target: READ, "Reading");
 
         match self.read_write.read(&mut state.buffer[state.index..]).await {
             Err(err) => {
-                error!("Failed to read");
+                error!(target: READ, "Failed to read");
 
                 Some(Err(ReadError::IO(err)))
             }
             Ok(0) => {
-                warn!("Got EOF");
+                warn!(target: READ, "Got EOF");
 
                 state.eof = true;
 
@@ -225,7 +236,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                 Some(Ok(None))
             }
             Ok(n) => {
-                debug!("Bytes read. bytes: {}", n);
+                debug!(target: READ, "Bytes read. bytes: {}", n);
 
                 state.index += n;
 
@@ -308,29 +319,29 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         match self.codec.encode(item, state.buffer) {
             Ok(size) => match self.read_write.write_all(&state.buffer[..size]).await {
                 Ok(_) => {
-                    debug!("Wrote. buffer: {:?}", Formatter(&state.buffer[..size]));
+                    trace!(target: WRITE, "Wrote. buffer: {:?}", Formatter(&state.buffer[..size]));
 
                     match self.read_write.flush().await {
                         Ok(_) => {
-                            trace!("Flushed");
+                            debug!(target: WRITE, "Flushed. bytes: {}", size);
 
                             Ok(())
                         }
                         Err(err) => {
-                            error!("Failed to flush");
+                            error!(target: WRITE, "Failed to flush");
 
                             Err(WriteError::IO(err))
                         }
                     }
                 }
                 Err(err) => {
-                    error!("Failed to write frame");
+                    error!(target: WRITE, "Failed to write frame");
 
                     Err(WriteError::IO(err))
                 }
             },
             Err(err) => {
-                error!("Failed to encode frame");
+                error!(target: WRITE, "Failed to encode frame");
 
                 Err(WriteError::Encode(err))
             }

@@ -42,7 +42,7 @@ macro_rules! framed_read {
                 }
                 Err(_err) => {
                     #[cfg(not(feature = "defmt"))]
-                    crate::logging::error!("Error: {:?}", _err);
+                    crate::logging::error!(target: "framez::test", "Error: {:?}", _err);
 
                     $(
                         assert!(matches!(_err, ReadError::$err));
