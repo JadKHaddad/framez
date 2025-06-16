@@ -2,10 +2,8 @@
 
 use core::convert::Infallible;
 
-use heapless::Vec;
-
 use crate::{
-    decode::{DecodeError, Decoder, OwnedDecoder},
+    decode::{DecodeError, Decoder},
     encode::Encoder,
 };
 
@@ -116,82 +114,6 @@ impl Encoder<&[u8]> for Delimiter<'_> {
     }
 }
 
-/// An owned [`Delimiter`].
-///
-/// # Note
-///
-/// This codec tracks progress using an internal state of the underlying buffer, and it must not be used across multiple framing sessions.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct OwnedDelimiter<'a, const N: usize> {
-    inner: Delimiter<'a>,
-}
-
-impl<'a, const N: usize> OwnedDelimiter<'a, N> {
-    /// Creates a new [`OwnedDelimiter`] with the given `delimiter`.
-    #[inline]
-    pub const fn new(delimiter: &'a [u8]) -> Self {
-        Self {
-            inner: Delimiter::new(delimiter),
-        }
-    }
-
-    /// Returns the delimiter to search for.
-    #[inline]
-    pub const fn delimiter(&self) -> &'a [u8] {
-        self.inner.delimiter
-    }
-}
-
-impl<'a, const N: usize> From<Delimiter<'a>> for OwnedDelimiter<'a, N> {
-    fn from(inner: Delimiter<'a>) -> Self {
-        Self { inner }
-    }
-}
-
-/// Error returned by [`OwnedDelimiter::decode_owned`].
-#[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum OwnedDelimiterDecodeError {
-    /// The buffer is too small to fit the decoded bytes.
-    BufferTooSmall,
-}
-
-impl core::fmt::Display for OwnedDelimiterDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            OwnedDelimiterDecodeError::BufferTooSmall => write!(f, "buffer too small"),
-        }
-    }
-}
-
-impl core::error::Error for OwnedDelimiterDecodeError {}
-
-impl<const N: usize> OwnedDecoder for OwnedDelimiter<'_, N> {
-    type Item = Vec<u8, N>;
-    type Error = OwnedDelimiterDecodeError;
-
-    fn decode_owned(&mut self, src: &mut [u8]) -> Result<Option<(Self::Item, usize)>, Self::Error> {
-        match Decoder::decode(&mut self.inner, src) {
-            Ok(Some((bytes, size))) => {
-                let item = Vec::from_slice(bytes)
-                    .map_err(|_| OwnedDelimiterDecodeError::BufferTooSmall)?;
-                Ok(Some((item, size)))
-            }
-            Ok(None) => Ok(None),
-            Err(_) => unreachable!(),
-        }
-    }
-}
-
-impl<const N: usize> Encoder<Vec<u8, N>> for OwnedDelimiter<'_, N> {
-    type Error = DelimiterEncodeError;
-
-    fn encode(&mut self, item: Vec<u8, N>, dst: &mut [u8]) -> Result<usize, Self::Error> {
-        Encoder::encode(&mut self.inner, &item, dst)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::vec::Vec;
@@ -268,21 +190,22 @@ mod test {
         framed_read!(items, expected, decoder);
     }
 
-    #[tokio::test]
-    async fn sink_stream() {
-        init_tracing();
+    //TODO
+    // #[tokio::test]
+    // async fn sink_stream() {
+    //     init_tracing();
 
-        let items: Vec<heapless::Vec<u8, 32>> = std::vec![
-            heapless::Vec::from_slice(b"Hello").unwrap(),
-            heapless::Vec::from_slice(b"Hello, world!").unwrap(),
-            heapless::Vec::from_slice(b"Hei").unwrap(),
-            heapless::Vec::from_slice(b"sup").unwrap(),
-            heapless::Vec::from_slice(b"Hey").unwrap(),
-        ];
+    //     let items: Vec<heapless::Vec<u8, 32>> = std::vec![
+    //         heapless::Vec::from_slice(b"Hello").unwrap(),
+    //         heapless::Vec::from_slice(b"Hello, world!").unwrap(),
+    //         heapless::Vec::from_slice(b"Hei").unwrap(),
+    //         heapless::Vec::from_slice(b"sup").unwrap(),
+    //         heapless::Vec::from_slice(b"Hey").unwrap(),
+    //     ];
 
-        let decoder = OwnedDelimiter::<32>::new(b"###");
-        let encoder = OwnedDelimiter::<32>::new(b"###");
+    //     let decoder = OwnedDelimiter::<32>::new(b"###");
+    //     let encoder = OwnedDelimiter::<32>::new(b"###");
 
-        sink_stream!(encoder, decoder, items);
-    }
+    //     sink_stream!(encoder, decoder, items);
+    // }
 }

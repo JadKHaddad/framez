@@ -3,12 +3,10 @@
 //! ```
 
 use core::{error::Error, pin::pin};
+use std::str::FromStr;
 
 use embedded_io_adapters::tokio_1::FromTokio;
-use framez::{
-    FramedRead, FramedWrite,
-    codec::lines::{StrLines, StringLines},
-};
+use framez::{FramedRead, FramedWrite, codec::lines::StrLines};
 use futures::{SinkExt, StreamExt};
 
 #[tokio::main]
@@ -20,13 +18,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (read, write) = tokio::io::duplex(1024);
 
     let read_buf = &mut [0u8; 1024];
-    let mut framed_read = FramedRead::new(StringLines::<32>::new(), FromTokio::new(read), read_buf);
+    let mut framed_read = FramedRead::new(StrLines::new(), FromTokio::new(read), read_buf);
 
     let reader = async move {
-        let stream = framed_read.stream();
+        let stream = framed_read.stream(String::from_str);
         let mut stream = pin!(stream);
 
-        while let Some(item) = stream.next().await.transpose()? {
+        while let Some(item) = stream.next().await.transpose()?.transpose()? {
             tracing::info!(target: "reader", %item, "received frame")
         }
 

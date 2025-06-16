@@ -8,7 +8,7 @@ use futures::{Sink, Stream};
 
 use crate::{
     ReadError, WriteError,
-    decode::{Decoder, OwnedDecoder},
+    decode::Decoder,
     encode::Encoder,
     logging::{debug, error, trace, warn},
     state::{ReadState, WriteState},
@@ -236,7 +236,45 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         }
     }
 
-    pub fn stream_mapped<U>(
+    async fn maybe_next_mapped<'this, U>(
+        &'this mut self,
+        map: fn(<C as Decoder<'_>>::Item) -> U,
+    ) -> Option<Result<Option<U>, ReadError<RW::Error, C::Error>>>
+    where
+        U: 'static,
+        C: for<'a> Decoder<'a>,
+        RW: Read,
+        S: BorrowMut<ReadState<'buf>>,
+    {
+        match self.maybe_next().await {
+            Some(Ok(Some(item))) => Some(Ok(Some(map(item)))),
+            Some(Ok(None)) => Some(Ok(None)),
+            Some(Err(err)) => Some(Err(err)),
+            None => None,
+        }
+    }
+
+    pub async fn next<'this, U>(
+        &'this mut self,
+        map: fn(<C as Decoder<'_>>::Item) -> U,
+    ) -> Option<Result<U, ReadError<RW::Error, C::Error>>>
+    where
+        U: 'static,
+        C: for<'a> Decoder<'a>,
+        RW: Read,
+        S: BorrowMut<ReadState<'buf>>,
+    {
+        loop {
+            match self.maybe_next_mapped(map).await {
+                Some(Ok(None)) => continue,
+                Some(Ok(Some(item))) => return Some(Ok(item)),
+                Some(Err(err)) => return Some(Err(err)),
+                None => return None,
+            }
+        }
+    }
+
+    pub fn stream<U>(
         &mut self,
         map: fn(<C as Decoder<'_>>::Item) -> U,
     ) -> impl Stream<Item = Result<U, ReadError<RW::Error, C::Error>>> + '_
@@ -251,178 +289,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                 return None;
             }
 
-            let item = crate::next!(this).map(|res| res.map(map));
-
-            match item {
-                Some(Ok(item)) => Some((Ok(item), (this, false))),
-                Some(Err(err)) => Some((Err(err), (this, true))),
-                None => None,
-            }
-        })
-    }
-
-    pub async fn next(&mut self) -> Option<Result<C::Item, ReadError<RW::Error, C::Error>>>
-    where
-        C: OwnedDecoder,
-        RW: Read,
-        S: BorrowMut<ReadState<'buf>>,
-    {
-        loop {
-            let state: &mut ReadState = self.state.borrow_mut();
-
-            debug!(
-                "total_consumed: {}, index: {}, buffer: {:?}",
-                state.total_consumed,
-                state.index,
-                Formatter(&state.buffer[state.total_consumed..state.index])
-            );
-
-            if state.shift {
-                state
-                    .buffer
-                    .copy_within(state.total_consumed..state.index, 0);
-
-                state.index -= state.total_consumed;
-                state.total_consumed = 0;
-
-                debug!("Buffer shifted. copied: {}", state.framable());
-
-                state.shift = false;
-
-                continue;
-            }
-
-            if state.is_framable {
-                if state.eof {
-                    trace!("Framing on EOF");
-
-                    match self
-                        .codec
-                        .decode_eof_owned(&mut state.buffer[state.total_consumed..state.index])
-                    {
-                        Ok(Some((item, size))) => {
-                            state.total_consumed += size;
-
-                            debug!(
-                                "Frame decoded, consumed: {}, total_consumed: {}",
-                                size, state.total_consumed,
-                            );
-
-                            return Some(Ok(item));
-                        }
-                        Ok(None) => {
-                            debug!("No frame decoded");
-
-                            state.is_framable = false;
-
-                            if state.index != state.total_consumed {
-                                error!("Bytes remaining on stream");
-
-                                return Some(Err(ReadError::BytesRemainingOnStream));
-                            }
-
-                            return None;
-                        }
-                        Err(err) => {
-                            error!("Failed to decode frame");
-
-                            return Some(Err(ReadError::Decode(err)));
-                        }
-                    };
-                }
-
-                trace!("Framing");
-
-                #[cfg(not(feature = "buffer-early-shift"))]
-                let buf_len = state.buffer.len();
-
-                match self
-                    .codec
-                    .decode_owned(&mut state.buffer[state.total_consumed..state.index])
-                {
-                    Ok(Some((item, size))) => {
-                        state.total_consumed += size;
-
-                        debug!(
-                            "Frame decoded, consumed: {}, total_consumed: {}",
-                            size, state.total_consumed,
-                        );
-
-                        return Some(Ok(item));
-                    }
-                    Ok(None) => {
-                        debug!("No frame decoded");
-                        #[cfg(feature = "buffer-early-shift")]
-                        {
-                            state.shift = state.total_consumed > 0;
-                        }
-
-                        #[cfg(not(feature = "buffer-early-shift"))]
-                        {
-                            state.shift = state.index >= buf_len;
-                        }
-
-                        state.is_framable = false;
-
-                        continue;
-                    }
-                    Err(err) => {
-                        error!("Failed to decode frame");
-
-                        return Some(Err(ReadError::Decode(err)));
-                    }
-                }
-            }
-            if state.index >= state.buffer.len() {
-                error!("Buffer too small");
-
-                return Some(Err(ReadError::BufferTooSmall));
-            }
-
-            trace!("Reading");
-
-            match self.read_write.read(&mut state.buffer[state.index..]).await {
-                Err(err) => {
-                    error!("Failed to read");
-
-                    return Some(Err(ReadError::IO(err)));
-                }
-                Ok(0) => {
-                    warn!("Got EOF");
-
-                    state.eof = true;
-
-                    state.is_framable = true;
-
-                    continue;
-                }
-                Ok(n) => {
-                    debug!("Bytes read. bytes: {}", n);
-
-                    state.index += n;
-
-                    state.is_framable = true;
-
-                    continue;
-                }
-            }
-        }
-    }
-
-    pub fn stream(
-        &mut self,
-    ) -> impl Stream<Item = Result<C::Item, ReadError<RW::Error, C::Error>>> + '_
-    where
-        C: OwnedDecoder,
-        RW: Read,
-        S: BorrowMut<ReadState<'buf>>,
-    {
-        futures::stream::unfold((self, false), |(this, errored)| async move {
-            if errored {
-                return None;
-            }
-
-            match this.next().await {
+            match this.next(map).await {
                 Some(Ok(item)) => Some((Ok(item), (this, false))),
                 Some(Err(err)) => Some((Err(err), (this, true))),
                 None => None,
