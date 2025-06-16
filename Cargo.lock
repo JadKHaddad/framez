@@ -172,7 +172,6 @@ dependencies = [
  "embedded-io-adapters",
  "embedded-io-async",
  "futures",
- "heapless",
  "log",
  "tokio",
  "tracing",
