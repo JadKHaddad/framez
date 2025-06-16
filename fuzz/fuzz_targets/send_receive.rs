@@ -1,7 +1,7 @@
 //! If we panic!, we lose.
 //!
 //! ```not_rust
-//! cargo +nightly fuzz run zerocopy -- -max_len=1022
+//! cargo +nightly fuzz run send_receive -- -max_len=1022
 //! ```
 //! 1022 to leave room for '\r\n' (Lines) and '#' (Delimiter).
 //! The read/write buffers are 1024 bytes.

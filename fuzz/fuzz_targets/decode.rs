@@ -8,11 +8,11 @@
 
 use framez::{
     codec::{
-        bytes::{Bytes, OwnedBytes},
-        delimiter::{Delimiter, OwnedDelimiter},
-        lines::{Lines, OwnedLines, StrLines, StringLines},
+        bytes::Bytes,
+        delimiter::Delimiter,
+        lines::{Lines, StrLines},
     },
-    decode::{Decoder, OwnedDecoder},
+    decode::Decoder,
 };
 use libfuzzer_sys::fuzz_target;
 
@@ -23,20 +23,11 @@ fuzz_target!(|data: &[u8]| {
     let mut codec = Delimiter::new(b"#");
     let _ = codec.decode(data).expect("Must be Infallible");
 
-    let mut codec = OwnedDelimiter::<64>::new(b"#");
-    let _ = codec.decode_owned(buf);
-
     let mut codec = Bytes::new();
     let _ = codec.decode(buf).expect("Must be Infallible");
 
-    let mut codec = OwnedBytes::<64>::new();
-    let _ = codec.decode_owned(buf);
-
     let mut codec = Lines::new();
     let _ = codec.decode(buf).expect("Must be Infallible");
-
-    let mut codec = OwnedLines::<64>::new();
-    let _ = codec.decode_owned(buf);
 
     let mut codec = StrLines::new();
 
@@ -48,7 +39,4 @@ fuzz_target!(|data: &[u8]| {
             let _ = codec.decode(buf);
         }
     }
-
-    let mut codec = StringLines::<64>::new();
-    let _ = codec.decode_owned(buf);
 });

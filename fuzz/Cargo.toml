@@ -34,14 +34,15 @@ path = "fuzz_targets/encode.rs"
 test = false
 doc = false
 
+
 [[bin]]
-name = "owned"
-path = "fuzz_targets/owned.rs"
+name = "receive"
+path = "fuzz_targets/receive.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "zerocopy"
-path = "fuzz_targets/zerocopy.rs"
+name = "send_receive"
+path = "fuzz_targets/send_receive.rs"
 test = false
 doc = false

@@ -42,7 +42,7 @@ macro_rules! framed_read {
                 }
                 Err(_err) => {
                     #[cfg(not(feature = "defmt"))]
-                    crate::logging::error!("Error: {:?}", _err);
+                    crate::logging::error!(target: "framez::test", "Error: {:?}", _err);
 
                     $(
                         assert!(matches!(_err, ReadError::$err));
@@ -58,7 +58,7 @@ macro_rules! framed_read {
 }
 
 macro_rules! sink_stream {
-    ($encoder:ident, $decoder:ident, $items:ident) => {
+    ($encoder:ident, $decoder:ident, $items:ident, $map:ident) => {
         let items_clone = $items.clone();
 
         let (read, write) = tokio::io::duplex(1024);
@@ -74,7 +74,7 @@ macro_rules! sink_stream {
 
             pin_mut!(sink);
 
-            for item in items_clone {
+            for item in items_clone.iter() {
                 sink.send(item).await.expect("Must send");
             }
         });
@@ -86,7 +86,7 @@ macro_rules! sink_stream {
             buffer,
         );
 
-        let stream = framer.stream();
+        let stream = framer.stream($map);
 
         let collected = stream
             .collect::<Vec<_>>()

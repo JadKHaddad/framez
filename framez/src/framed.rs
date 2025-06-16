@@ -3,7 +3,7 @@ use futures::{Sink, Stream};
 
 use crate::{
     FramedCore, ReadError, WriteError,
-    decode::{Decoder, OwnedDecoder},
+    decode::Decoder,
     encode::Encoder,
     state::{ReadState, ReadWriteState, WriteState},
 };
@@ -58,10 +58,24 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         self.core.inner_mut()
     }
 
-    /// Consumes the [`Framed`] and returns the `codec` and `reader/writer`.
+    /// Consumes the [`Framed`] and returns the `codec` and `reader/writer` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, RW) {
+    pub fn into_parts(self) -> (C, RW, ReadWriteState<'buf>) {
         self.core.into_parts()
+    }
+
+    #[inline]
+    /// Creates a new [`Framed`] from its parts.
+    pub const fn from_parts(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(codec, read_write, state),
+        }
+    }
+
+    /// Returns the number of bytes that can be framed.
+    #[inline]
+    pub fn framable(&self) -> usize {
+        self.core.framable()
     }
 
     /// Tries to read a frame from the underlying reader.
@@ -127,7 +141,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
     ///
     ///     let mut framed = Framed::new(StrLines::new(), Noop, r_buf, w_buf);
     ///
-    ///     let stream = framed.stream_mapped(String::from_str);
+    ///     let stream = framed.stream(String::from_str);
     ///     let mut stream = pin!(stream);
     ///
     ///     while let Some(item) = stream.next().await.transpose()?.transpose()? {
@@ -137,7 +151,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
     ///     Ok(())
     /// }
     /// ```
-    pub fn stream_mapped<U>(
+    pub fn stream<U>(
         &mut self,
         map: fn(<C as Decoder<'_>>::Item) -> U,
     ) -> impl Stream<Item = Result<U, ReadError<RW::Error, C::Error>>> + '_
@@ -146,33 +160,26 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         C: for<'a> Decoder<'a>,
         RW: Read,
     {
-        self.core.stream_mapped(map)
+        self.core.stream(map)
     }
 
-    /// Tries to read a frame from the underlying reader.
+    /// Tries to read a frame from the underlying reader and converts it using the given `map` function.
     ///
     /// # Return value
     ///
-    /// - `Some(Ok(frame))` if a frame was successfully decoded. Call `next` again to read more frames.
+    /// - `Some(Ok(U))` if a frame was successfully decoded and mapped. Call `next` again to read more frames.
     /// - `Some(Err(error))` if an error occurred. The caller should stop reading.
     /// - `None` if eof was reached. The caller should stop reading.
-    pub async fn next(&mut self) -> Option<Result<C::Item, ReadError<RW::Error, C::Error>>>
-    where
-        C: OwnedDecoder,
-        RW: Read,
-    {
-        self.core.next().await
-    }
-
-    /// Converts the [`Framed`] into a stream of frames.
-    pub fn stream(
+    pub async fn next<U>(
         &mut self,
-    ) -> impl Stream<Item = Result<C::Item, ReadError<RW::Error, C::Error>>> + '_
+        map: fn(<C as Decoder<'_>>::Item) -> U,
+    ) -> Option<Result<U, ReadError<RW::Error, C::Error>>>
     where
-        C: OwnedDecoder,
+        U: 'static,
+        C: for<'a> Decoder<'a>,
         RW: Read,
     {
-        self.core.stream()
+        self.core.next(map).await
     }
 
     /// Writes a frame to the underlying `writer` and flushes it.
@@ -237,10 +244,18 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
         self.core.inner_mut()
     }
 
-    /// Consumes the [`FramedRead`] and returns the `codec` and `reader`.
+    /// Consumes the [`FramedRead`] and returns the `codec` and `reader` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, R) {
+    pub fn into_parts(self) -> (C, R, ReadState<'buf>) {
         self.core.into_parts()
+    }
+
+    #[inline]
+    /// Creates a new [`FramedRead`] from its parts.
+    pub const fn from_parts(codec: C, read: R, state: ReadState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(codec, read, state),
+        }
     }
 
     /// See [`Framed::maybe_next`].
@@ -254,8 +269,8 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
         self.core.maybe_next().await
     }
 
-    /// See [`Framed::stream_mapped`].
-    pub fn stream_mapped<U>(
+    /// See [`Framed::stream`].
+    pub fn stream<U>(
         &mut self,
         map: fn(<C as Decoder<'_>>::Item) -> U,
     ) -> impl Stream<Item = Result<U, ReadError<R::Error, C::Error>>> + '_
@@ -264,27 +279,20 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
         C: for<'a> Decoder<'a>,
         R: Read,
     {
-        self.core.stream_mapped(map)
+        self.core.stream(map)
     }
 
     /// See [`Framed::next`].
-    pub async fn next(&mut self) -> Option<Result<C::Item, ReadError<R::Error, C::Error>>>
-    where
-        C: OwnedDecoder,
-        R: Read,
-    {
-        self.core.next().await
-    }
-
-    /// See [`Framed::stream`].
-    pub fn stream(
+    pub async fn next<U>(
         &mut self,
-    ) -> impl Stream<Item = Result<C::Item, ReadError<R::Error, C::Error>>> + '_
+        map: fn(<C as Decoder<'_>>::Item) -> U,
+    ) -> Option<Result<U, ReadError<R::Error, C::Error>>>
     where
-        C: OwnedDecoder,
+        U: 'static,
+        C: for<'a> Decoder<'a>,
         R: Read,
     {
-        self.core.stream()
+        self.core.next(map).await
     }
 }
 
@@ -328,10 +336,18 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
         self.core.inner_mut()
     }
 
-    /// Consumes the [`FramedWrite`] and returns the `codec` and `writer`.
+    /// Consumes the [`FramedWrite`] and returns the `codec` and `writer` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, W) {
+    pub fn into_parts(self) -> (C, W, WriteState<'buf>) {
         self.core.into_parts()
+    }
+
+    #[inline]
+    /// Creates a new [`FramedWrite`] from its parts.
+    pub const fn from_parts(codec: C, write: W, state: WriteState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(codec, write, state),
+        }
     }
 
     /// See [`Framed::send`].
@@ -356,7 +372,6 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
     }
 }
 
-// TODO: add assertion tests for FramedRead and FramedWrite
 #[cfg(test)]
 mod tests {
     #![allow(clippy::redundant_pattern_matching)]
@@ -368,11 +383,7 @@ mod tests {
     use embedded_io_adapters::tokio_1::FromTokio;
     use futures::{SinkExt, StreamExt};
 
-    use crate::{
-        Framed, FramedRead, FramedWrite,
-        codec::lines::{StrLines, StringLines},
-        next,
-    };
+    use crate::{Framed, FramedRead, FramedWrite, codec::lines::StrLines, next};
 
     #[tokio::test]
     #[ignore = "assert that next! macro works on Framed"]
@@ -404,8 +415,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "assert that stream_mapped() works on Framed"]
-    async fn assert_stream_mapped() {
+    #[ignore = "assert that stream() works on Framed"]
+    async fn assert_stream() {
         let (mut stream, _) = tokio::io::duplex(1024);
 
         let read_buf = &mut [0u8; 1024];
@@ -419,7 +430,7 @@ mod tests {
                 write_buf,
             );
 
-            let stream = framed.stream_mapped(String::from_str);
+            let stream = framed.stream(String::from_str);
             let mut stream = pin!(stream);
 
             while let Some(_) = stream.next().await {}
@@ -429,43 +440,7 @@ mod tests {
             let mut framed =
                 FramedRead::new(StrLines::new(), FromTokio::new(&mut stream), read_buf);
 
-            let stream = framed.stream_mapped(String::from_str);
-            let mut stream = pin!(stream);
-
-            while let Some(_) = stream.next().await {}
-        }
-    }
-
-    #[tokio::test]
-    #[ignore = "assert that stream() works on Framed"]
-    async fn assert_stream() {
-        let (mut stream, _) = tokio::io::duplex(1024);
-
-        let read_buf = &mut [0u8; 1024];
-        let write_buf = &mut [0u8; 1024];
-
-        {
-            let mut framed = Framed::new(
-                StringLines::<10>::new(),
-                FromTokio::new(&mut stream),
-                read_buf,
-                write_buf,
-            );
-
-            let stream = framed.stream();
-            let mut stream = pin!(stream);
-
-            while let Some(_) = stream.next().await {}
-        }
-
-        {
-            let mut framed = FramedRead::new(
-                StringLines::<10>::new(),
-                FromTokio::new(&mut stream),
-                read_buf,
-            );
-
-            let stream = framed.stream();
+            let stream = framed.stream(String::from_str);
             let mut stream = pin!(stream);
 
             while let Some(_) = stream.next().await {}
@@ -482,7 +457,7 @@ mod tests {
 
         {
             let mut framed = Framed::new(
-                StringLines::<10>::new(),
+                StrLines::new(),
                 FromTokio::new(&mut stream),
                 read_buf,
                 write_buf,
@@ -490,7 +465,7 @@ mod tests {
 
             let _ = async move {
                 // We should be able to move framed and call stream on it.
-                let stream = framed.stream();
+                let stream = framed.stream(String::from_str);
                 let mut stream = pin!(stream);
 
                 while let Some(_) = stream.next().await {}
@@ -498,15 +473,12 @@ mod tests {
         }
 
         {
-            let mut framed = FramedRead::new(
-                StringLines::<10>::new(),
-                FromTokio::new(&mut stream),
-                read_buf,
-            );
+            let mut framed =
+                FramedRead::new(StrLines::new(), FromTokio::new(&mut stream), read_buf);
 
             let _ = async move {
                 // We should be able to move framed and call stream on it.
-                let stream = framed.stream();
+                let stream = framed.stream(String::from_str);
                 let mut stream = pin!(stream);
 
                 while let Some(_) = stream.next().await {}

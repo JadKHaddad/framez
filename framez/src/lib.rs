@@ -15,7 +15,6 @@
 //! - `tracing`: Enables logging using [`tracing`](https://docs.rs/tracing/latest/tracing/).
 //! - `defmt`: Enables logging using [`defmt`](https://docs.rs/defmt/latest/defmt/index.html)
 //!   and implements [`defmt::Format`](https://docs.rs/defmt/latest/defmt/trait.Format.html) for structs and enums.
-//! - `buffer-early-shift`: Moves the bytes in the encode buffer to the start of the buffer after the first successful decoded frame.
 
 #![no_std]
 #![deny(unsafe_code)]
@@ -36,7 +35,7 @@ use framed_core::FramedCore;
 mod error;
 pub use error::{ReadError, WriteError};
 
-mod state;
+pub mod state;
 
 pub(crate) mod logging;
 

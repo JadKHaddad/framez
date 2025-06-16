@@ -1,59 +1,73 @@
 //! Logging utilities.
 
+#[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
 mod formatter;
 
 #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
 pub(crate) use formatter::Formatter;
 
 macro_rules! trace {
-    ($($arg:tt)*) => {
+    (target: $target:expr, $($arg:tt)+) => {
         #[cfg(feature = "tracing")]
-        tracing::trace!($($arg)*);
+        tracing::trace!(target: $target, $($arg)*);
 
         #[cfg(feature = "log")]
-        log::trace!($($arg)*);
+        log::trace!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::trace!($($arg)*);
+        {
+            _ = $target;
+            defmt::trace!($($arg)*);
+        }
+
     };
 }
 
 macro_rules! debug {
-    ($($arg:tt)*) => {
+    (target: $target:expr, $($arg:tt)+) => {
         #[cfg(feature = "tracing")]
-        tracing::debug!($($arg)*);
+        tracing::debug!(target: $target, $($arg)*);
 
         #[cfg(feature = "log")]
-        log::debug!($($arg)*);
+        log::debug!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::debug!($($arg)*);
+        {
+            _ = $target;
+            defmt::debug!($($arg)*);
+        }
     };
 }
 
 macro_rules! error {
-    ($($arg:tt)*) => {
+    (target: $target:expr, $($arg:tt)+) => {
         #[cfg(feature = "tracing")]
-        tracing::error!($($arg)*);
+        tracing::error!(target: $target, $($arg)*);
 
         #[cfg(feature = "log")]
-        log::error!($($arg)*);
+        log::error!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::error!($($arg)*);
+        {
+            _ = $target;
+            defmt::error!($($arg)*);
+        }
     };
 }
 
 macro_rules! warn_ {
-    ($($arg:tt)*) => {
+    (target: $target:expr, $($arg:tt)+) => {
         #[cfg(feature = "tracing")]
-        tracing::warn!($($arg)*);
+        tracing::warn!(target: $target, $($arg)*);
 
         #[cfg(feature = "log")]
-        log::warn!($($arg)*);
+        log::warn!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::warn!($($arg)*);
+        {
+            _ = $target;
+            defmt::warn!($($arg)*);
+        }
     };
 }
 

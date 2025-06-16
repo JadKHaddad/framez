@@ -17,7 +17,6 @@ tracing = ["dep:tracing"]
 defmt = ["dep:defmt"]
 pretty-hex-fmt = []
 char-fmt = []
-buffer-early-shift = []
 
 [dependencies]
 embedded-io-async = { version = "0.6.1", default-features = false }
@@ -25,7 +24,6 @@ futures = { version = "0.3.31", default-features = false }
 log = { version = "0.4.22", default-features = false, optional = true }
 tracing = { version = "0.1.40", default-features = false, optional = true }
 defmt = { version = "1.0.1", default-features = false, optional = true }
-heapless = { version = "0.8.0", default-features = false }
 
 [dev-dependencies]
 embedded-io-adapters = { version = "0.6.1", default-features = false, features = [
@@ -45,6 +43,6 @@ path = "examples/zerocopy.rs"
 required-features = []
 
 [[example]]
-name = "owned"
-path = "examples/owned.rs"
+name = "stream"
+path = "examples/stream.rs"
 required-features = []

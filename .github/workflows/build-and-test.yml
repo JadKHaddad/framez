@@ -75,6 +75,3 @@ jobs:
 
       - name: Test
         run: cargo nextest run --all
-
-      - name: Test -- buffer-early-shift
-        run: cargo nextest run --features buffer-early-shift --all
