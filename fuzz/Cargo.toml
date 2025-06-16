@@ -35,17 +35,16 @@ test = false
 doc = false
 
 [[bin]]
-name = "owned"
-path = "fuzz_targets/owned.rs"
+name = "incoming"
+path = "fuzz_targets/incoming.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "zerocopy_incoming"
-path = "fuzz_targets/zerocopy_incoming.rs"
+name = "stream"
+path = "fuzz_targets/stream.rs"
 test = false
 doc = false
-
 
 [[bin]]
 name = "zerocopy"

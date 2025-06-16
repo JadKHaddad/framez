@@ -45,6 +45,6 @@ path = "examples/zerocopy.rs"
 required-features = []
 
 [[example]]
-name = "owned"
-path = "examples/owned.rs"
+name = "stream"
+path = "examples/stream.rs"
 required-features = []

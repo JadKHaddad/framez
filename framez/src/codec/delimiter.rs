@@ -190,22 +190,22 @@ mod test {
         framed_read!(items, expected, decoder);
     }
 
-    //TODO
-    // #[tokio::test]
-    // async fn sink_stream() {
-    //     init_tracing();
+    #[tokio::test]
+    async fn sink_stream() {
+        init_tracing();
 
-    //     let items: Vec<heapless::Vec<u8, 32>> = std::vec![
-    //         heapless::Vec::from_slice(b"Hello").unwrap(),
-    //         heapless::Vec::from_slice(b"Hello, world!").unwrap(),
-    //         heapless::Vec::from_slice(b"Hei").unwrap(),
-    //         heapless::Vec::from_slice(b"sup").unwrap(),
-    //         heapless::Vec::from_slice(b"Hey").unwrap(),
-    //     ];
+        let items: Vec<Vec<u8>> = std::vec![
+            b"Hello".to_vec(),
+            b"Hello, world!".to_vec(),
+            b"Hei".to_vec(),
+            b"sup".to_vec(),
+            b"Hey".to_vec(),
+        ];
 
-    //     let decoder = OwnedDelimiter::<32>::new(b"###");
-    //     let encoder = OwnedDelimiter::<32>::new(b"###");
+        let decoder = Delimiter::new(b"###");
+        let encoder = Delimiter::new(b"###");
+        let map = |item: &[u8]| item.to_vec();
 
-    //     sink_stream!(encoder, decoder, items);
-    // }
+        sink_stream!(encoder, decoder, items, map);
+    }
 }

@@ -1,7 +1,7 @@
 //! If we panic!, we lose.
 //!
 //! ```not_rust
-//! cargo +nightly fuzz run zerocopy_incoming
+//! cargo +nightly fuzz run incoming
 //! ```
 
 #![no_main]

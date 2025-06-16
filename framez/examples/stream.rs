@@ -1,5 +1,5 @@
 //! ```not_rust
-//! cargo run --example owned
+//! cargo run --example stream
 //! ```
 
 use core::{error::Error, pin::pin};

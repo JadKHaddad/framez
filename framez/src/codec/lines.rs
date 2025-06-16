@@ -1,8 +1,6 @@
 //! Lines codecs for encoding and decoding lines.
 
-use core::{convert::Infallible, str::FromStr};
-
-use heapless::{String, Vec};
+use core::convert::Infallible;
 
 use crate::{
     decode::{DecodeError, Decoder},
@@ -176,7 +174,10 @@ impl<'a> Encoder<&'a str> for StrLines {
 
 #[cfg(test)]
 mod test {
-    use std::vec::Vec;
+    use std::{
+        string::{String, ToString},
+        vec::Vec,
+    };
 
     use futures::{SinkExt, StreamExt, pin_mut};
     use tokio::io::AsyncWriteExt;
@@ -237,24 +238,24 @@ mod test {
         framed_read!(items, expected, decoder);
     }
 
-    //TODO
-    // #[tokio::test]
-    // async fn sink_stream() {
-    //     init_tracing();
+    #[tokio::test]
+    async fn sink_stream() {
+        init_tracing();
 
-    //     let items: Vec<heapless::Vec<u8, 32>> = std::vec![
-    //         heapless::Vec::from_slice(b"Hello").unwrap(),
-    //         heapless::Vec::from_slice(b"Hello, world!").unwrap(),
-    //         heapless::Vec::from_slice(b"Hei").unwrap(),
-    //         heapless::Vec::from_slice(b"sup").unwrap(),
-    //         heapless::Vec::from_slice(b"Hey").unwrap(),
-    //     ];
+        let items: Vec<Vec<u8>> = std::vec![
+            b"Hello".to_vec(),
+            b"Hello, world!".to_vec(),
+            b"Hei".to_vec(),
+            b"sup".to_vec(),
+            b"Hey".to_vec(),
+        ];
 
-    //     let decoder = OwnedLines::<32>::new();
-    //     let encoder = OwnedLines::<32>::new();
+        let decoder = Lines::new();
+        let encoder = Lines::new();
+        let map = |item: &[u8]| item.to_vec();
 
-    //     sink_stream!(encoder, decoder, items);
-    // }
+        sink_stream!(encoder, decoder, items, map);
+    }
 
     #[tokio::test]
     async fn framed_read_str() {
@@ -305,22 +306,22 @@ mod test {
         framed_read!(items, expected, decoder);
     }
 
-    //TODO
-    // #[tokio::test]
-    // async fn sink_stream_str() {
-    //     init_tracing();
+    #[tokio::test]
+    async fn sink_stream_str() {
+        init_tracing();
 
-    //     let items: Vec<heapless::String<32>> = std::vec![
-    //         heapless::String::from_str("Hello").unwrap(),
-    //         heapless::String::from_str("Hello, world!").unwrap(),
-    //         heapless::String::from_str("Hei").unwrap(),
-    //         heapless::String::from_str("sup").unwrap(),
-    //         heapless::String::from_str("Hey").unwrap(),
-    //     ];
+        let items: Vec<String> = std::vec![
+            String::from("Hello"),
+            String::from("Hello, world!"),
+            String::from("Hei"),
+            String::from("sup"),
+            String::from("Hey"),
+        ];
 
-    //     let decoder = StringLines::<32>::new();
-    //     let encoder = StringLines::<32>::new();
+        let decoder = StrLines::new();
+        let encoder = StrLines::new();
+        let map = |item: &str| item.to_string();
 
-    //     sink_stream!(encoder, decoder, items);
-    // }
+        sink_stream!(encoder, decoder, items, map);
+    }
 }
