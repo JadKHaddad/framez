@@ -169,7 +169,6 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
 
             trace!(target: READ, "Framing");
 
-            #[cfg(not(feature = "buffer-early-shift"))]
             let buf_len = state.buffer.len();
 
             match self
@@ -190,15 +189,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
                 Ok(None) => {
                     debug!(target: READ, "No frame decoded");
 
-                    #[cfg(feature = "buffer-early-shift")]
-                    {
-                        state.shift = state.total_consumed > 0;
-                    }
-
-                    #[cfg(not(feature = "buffer-early-shift"))]
-                    {
-                        state.shift = state.index >= buf_len;
-                    }
+                    state.shift = state.index >= buf_len;
 
                     state.is_framable = false;
 

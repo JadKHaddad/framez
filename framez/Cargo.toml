@@ -17,7 +17,6 @@ tracing = ["dep:tracing"]
 defmt = ["dep:defmt"]
 pretty-hex-fmt = []
 char-fmt = []
-buffer-early-shift = []   # TODO: remove this feature and use a bool instead
 
 [dependencies]
 embedded-io-async = { version = "0.6.1", default-features = false }
