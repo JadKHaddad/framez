@@ -1,4 +1,4 @@
-//! Decoding traits definitions.
+//! Decoder trait definition.
 
 /// An error that can occur while decoding a frame.
 pub trait DecodeError {
