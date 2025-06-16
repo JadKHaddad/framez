@@ -1,5 +1,5 @@
 //! ```not_rust
-//! cargo run --example zerocopy
+//! cargo run --example zerocopy --features tracing
 //! ```
 
 use core::error::Error;
@@ -10,10 +10,10 @@ use framez::{FramedRead, FramedWrite, codec::lines::StrLines, next};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt()
-        .with_env_filter("reader=info,writer=info")
+        .with_env_filter("reader=info,writer=info,framez=trace")
         .init();
 
-    let (read, write) = tokio::io::duplex(1024);
+    let (read, write) = tokio::io::duplex(8);
 
     let read_buf = &mut [0u8; 1024];
     let mut framed_read = FramedRead::new(StrLines::new(), FromTokio::new(read), read_buf);
