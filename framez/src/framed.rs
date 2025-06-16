@@ -372,7 +372,6 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
     }
 }
 
-// TODO: add assertion tests for FramedRead and FramedWrite
 #[cfg(test)]
 mod tests {
     #![allow(clippy::redundant_pattern_matching)]
