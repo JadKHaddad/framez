@@ -19,7 +19,7 @@
 #![no_std]
 #![deny(unsafe_code)]
 #![deny(missing_debug_implementations)]
-// #![deny(missing_docs)] # TODO
+#![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod codec;
