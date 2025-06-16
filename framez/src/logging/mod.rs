@@ -15,7 +15,11 @@ macro_rules! trace {
         log::trace!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::trace!($($arg)*);
+        {
+            _ = $target;
+            defmt::trace!($($arg)*);
+        }
+
     };
 }
 
@@ -28,7 +32,10 @@ macro_rules! debug {
         log::debug!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::debug!($($arg)*);
+        {
+            _ = $target;
+            defmt::debug!($($arg)*);
+        }
     };
 }
 
@@ -41,7 +48,10 @@ macro_rules! error {
         log::error!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::error!($($arg)*);
+        {
+            _ = $target;
+            defmt::error!($($arg)*);
+        }
     };
 }
 
@@ -54,7 +64,10 @@ macro_rules! warn_ {
         log::warn!(target: $target, $($arg)*);
 
         #[cfg(feature = "defmt")]
-        defmt::warn!($($arg)*);
+        {
+            _ = $target;
+            defmt::warn!($($arg)*);
+        }
     };
 }
 
