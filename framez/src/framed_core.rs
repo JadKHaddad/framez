@@ -33,7 +33,7 @@ pub struct FramedCore<'this, C, RW, S> {
 }
 
 impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
-    pub fn new(codec: C, read_write: RW, state: S) -> Self {
+    pub const fn new(codec: C, read_write: RW, state: S) -> Self {
         Self {
             codec,
             read_write,
@@ -50,7 +50,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
 
     /// Returns mutable reference to the codec.
     #[inline]
-    pub fn codec_mut(&mut self) -> &mut C {
+    pub const fn codec_mut(&mut self) -> &mut C {
         &mut self.codec
     }
 
@@ -62,7 +62,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
 
     /// Returns mutable reference to the reader/writer.
     #[inline]
-    pub fn inner_mut(&mut self) -> &mut RW {
+    pub const fn inner_mut(&mut self) -> &mut RW {
         &mut self.read_write
     }
 

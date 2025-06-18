@@ -19,7 +19,7 @@ pub struct Framed<'buf, C, RW> {
 impl<'buf, C, RW> Framed<'buf, C, RW> {
     /// Creates a new [`Framed`] with the given `coded` and `reader/writer`.
     #[inline]
-    pub fn new(
+    pub const fn new(
         codec: C,
         inner: RW,
         read_buffer: &'buf mut [u8],
@@ -42,7 +42,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
 
     /// Returns mutable reference to the codec.
     #[inline]
-    pub fn codec_mut(&mut self) -> &mut C {
+    pub const fn codec_mut(&mut self) -> &mut C {
         self.core.codec_mut()
     }
 
@@ -54,7 +54,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
 
     /// Returns mutable reference to the reader/writer.
     #[inline]
-    pub fn inner_mut(&mut self) -> &mut RW {
+    pub const fn inner_mut(&mut self) -> &mut RW {
         self.core.inner_mut()
     }
 
@@ -214,7 +214,7 @@ pub struct FramedRead<'buf, C, R> {
 impl<'buf, C, R> FramedRead<'buf, C, R> {
     /// Creates a new [`FramedRead`] with the given `decoder` and `reader`.
     #[inline]
-    pub fn new(codec: C, reader: R, buffer: &'buf mut [u8]) -> Self {
+    pub const fn new(codec: C, reader: R, buffer: &'buf mut [u8]) -> Self {
         Self {
             core: FramedCore::new(codec, reader, ReadState::new(buffer)),
         }
@@ -228,7 +228,7 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
 
     /// Returns mutable reference to the codec.
     #[inline]
-    pub fn codec_mut(&mut self) -> &mut C {
+    pub const fn codec_mut(&mut self) -> &mut C {
         self.core.codec_mut()
     }
 
@@ -240,7 +240,7 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
 
     /// Returns mutable reference to the reader.
     #[inline]
-    pub fn inner_mut(&mut self) -> &mut R {
+    pub const fn inner_mut(&mut self) -> &mut R {
         self.core.inner_mut()
     }
 
@@ -306,7 +306,7 @@ pub struct FramedWrite<'buf, C, W> {
 impl<'buf, C, W> FramedWrite<'buf, C, W> {
     /// Creates a new [`FramedWrite`] with the given `encoder` and `writer`.
     #[inline]
-    pub fn new(codec: C, writer: W, buffer: &'buf mut [u8]) -> Self {
+    pub const fn new(codec: C, writer: W, buffer: &'buf mut [u8]) -> Self {
         Self {
             core: FramedCore::new(codec, writer, WriteState::new(buffer)),
         }
@@ -320,7 +320,7 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
 
     /// Returns mutable reference to the codec.
     #[inline]
-    pub fn codec_mut(&mut self) -> &mut C {
+    pub const fn codec_mut(&mut self) -> &mut C {
         self.core.codec_mut()
     }
 
@@ -332,7 +332,7 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
 
     /// Returns mutable reference to the writer.
     #[inline]
-    pub fn inner_mut(&mut self) -> &mut W {
+    pub const fn inner_mut(&mut self) -> &mut W {
         self.core.inner_mut()
     }
 
