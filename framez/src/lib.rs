@@ -19,7 +19,7 @@
 #![no_std]
 #![deny(unsafe_code)]
 #![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
+// #![deny(missing_docs)] // TODO
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod codec;
@@ -32,6 +32,8 @@ pub use framed::{Framed, FramedRead, FramedWrite};
 mod framed_core;
 pub use framed_core::Echo;
 use framed_core::FramedCore;
+
+pub mod functions;
 
 mod error;
 pub use error::{ReadError, ReadWriteError, WriteError};

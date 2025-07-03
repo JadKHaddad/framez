@@ -15,7 +15,7 @@ use crate::{
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Framed<'buf, C, RW> {
-    core: FramedCore<'buf, C, RW>,
+    pub core: FramedCore<'buf, C, RW>,
 }
 
 impl<'buf, C, RW> Framed<'buf, C, RW> {
