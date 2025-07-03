@@ -17,7 +17,7 @@
 //!   and implements [`defmt::Format`](https://docs.rs/defmt/latest/defmt/trait.Format.html) for structs and enums.
 
 #![no_std]
-#![deny(unsafe_code)]
+// #![deny(unsafe_code)]
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

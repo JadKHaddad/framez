@@ -354,4 +354,34 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
             Ok::<_, WriteError<RW::Error, C::Error>>(this)
         })
     }
+
+    pub async fn echo<'this, F>(&'this mut self, f: F) -> Option<Result<Option<C::Item>, ()>>
+    where
+        C: Decoder<'this> + Encoder<C::Item>,
+        F: FnOnce(C::Item) -> Echo<C::Item>,
+        RW: Read + Write,
+        S: BorrowMut<ReadState<'buf>> + BorrowMut<WriteState<'buf>>,
+    {
+        let this: &mut Self = unsafe { core::mem::transmute_copy(&self) };
+
+        let item = match this.maybe_next().await {
+            Some(Ok(Some(item))) => item,
+            Some(Ok(None)) => return Some(Ok(None)),
+            Some(Err(_)) => return Some(Err(())),
+            None => return None,
+        };
+
+        match f(item) {
+            Echo::Echo(item) => match self.send(item).await {
+                Ok(_) => Some(Ok(None)),
+                Err(_) => Some(Err(())),
+            },
+            Echo::NoEcho(item) => Some(Ok(Some(item))),
+        }
+    }
+}
+
+pub enum Echo<T> {
+    Echo(T),
+    NoEcho(T),
 }
