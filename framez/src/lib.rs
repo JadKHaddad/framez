@@ -34,7 +34,7 @@ pub use framed_core::Echo;
 use framed_core::FramedCore;
 
 mod error;
-pub use error::{ReadError, WriteError};
+pub use error::{ReadError, ReadWriteError, WriteError};
 
 pub mod state;
 
