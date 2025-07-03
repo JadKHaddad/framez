@@ -75,3 +75,5 @@ jobs:
 
       - name: Test
         run: cargo nextest run --all
+
+      # TODO: miri

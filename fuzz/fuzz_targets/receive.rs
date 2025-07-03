@@ -9,19 +9,35 @@
 use std::error::Error;
 
 use embedded_io_adapters::tokio_1::FromTokio;
-use framez::{codec::lines::StrLines, next, FramedRead};
+use framez::{codec::lines::StrLines, next_echoed, Echo, Framed};
 use libfuzzer_sys::fuzz_target;
 use tokio::{io::AsyncWriteExt, runtime::Runtime};
 
+fn echo(data: &str) -> Echo<&str> {
+    if data.len() % 2 == 0 {
+        return Echo::Echo(data);
+    }
+
+    Echo::NoEcho(data)
+}
+
+fn no_echo(data: &str) -> Echo<&str> {
+    Echo::NoEcho(data)
+}
+
 fuzz_target!(|data: &[u8]| {
     Runtime::new().expect("Runtime must build").block_on(async {
-        fuzz(data).await.unwrap();
+        fuzz(data, no_echo).await.unwrap();
+        fuzz(data, echo).await.unwrap();
     });
 });
 
-const SIZE: usize = 1024;
+const SIZE: usize = 1024 * 1024;
 
-async fn fuzz(data: &[u8]) -> Result<(), Box<dyn Error>> {
+async fn fuzz<F>(data: &[u8], echo: F) -> Result<(), Box<dyn Error>>
+where
+    F: Copy + FnOnce(&str) -> Echo<&str>,
+{
     if data.is_empty() {
         return Ok(());
     }
@@ -30,10 +46,10 @@ async fn fuzz(data: &[u8]) -> Result<(), Box<dyn Error>> {
 
     let read_buf = &mut [0u8; SIZE];
 
-    let mut framed_read = FramedRead::new(StrLines::new(), FromTokio::new(read), read_buf);
+    let mut framed_read = Framed::new(StrLines::new(), FromTokio::new(read), read_buf, &mut []);
 
     let reader = async move {
-        let _ = next!(framed_read);
+        let _ = next_echoed!(framed_read, echo);
 
         Ok::<(), Box<dyn Error>>(())
     };
