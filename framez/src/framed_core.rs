@@ -380,6 +380,8 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
 /// TODO
 #[derive(Debug)]
 pub enum Echo<T> {
+    /// Echo the item back to the writer.
     Echo(T),
+    /// Do not echo the item back to the writer.
     NoEcho(T),
 }

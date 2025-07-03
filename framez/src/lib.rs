@@ -30,6 +30,8 @@ mod framed;
 pub use framed::{Framed, FramedRead, FramedWrite};
 
 mod framed_core;
+// TODO
+pub use framed_core::Echo;
 use framed_core::FramedCore;
 
 mod error;
