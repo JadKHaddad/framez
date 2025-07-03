@@ -211,7 +211,9 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
     }
 }
 
-/// TODO
+/// Wether to echo the item back to the writer or not.
+///
+/// See [`Framed::maybe_next_echoed`](crate::Framed::maybe_next_echoed).
 #[derive(Debug)]
 pub enum Echo<T> {
     /// Echo the item back to the writer.

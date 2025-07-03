@@ -19,7 +19,13 @@ macro_rules! next {
     }};
 }
 
-/// TODO
+/// Calls [`Framed::maybe_next_echoed`](crate::Framed::maybe_next_echoed) in a loop until a frame is returned or an error occurs.
+///
+/// # Return value
+///
+/// - `Some(Ok(frame))` if a frame was successfully decoded or echoed. Call `next_echoed` again to read more frames.
+/// - `Some(Err(error))` if an error occurred. The caller should stop reading
+/// - `None` if eof was reached. The caller should stop reading.
 #[macro_export]
 macro_rules! next_echoed {
     ($framed:ident, $f:expr) => {{
