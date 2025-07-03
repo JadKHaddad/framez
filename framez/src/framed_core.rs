@@ -3,8 +3,9 @@ use futures::{Sink, Stream};
 
 use crate::{
     ReadError, WriteError,
-    decode::Decoder,
+    decode::{DecodeError, Decoder},
     encode::Encoder,
+    error::ReadWriteError,
     logging::{debug, error, trace, warn},
     state::ReadWriteState,
 };
@@ -343,11 +344,15 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         })
     }
 
-    // TODO
     pub async fn maybe_next_echoed<'this, F>(
         &'this mut self,
         f: F,
-    ) -> Option<Result<Option<C::Item>, ()>>
+    ) -> Option<
+        Result<
+            Option<C::Item>,
+            ReadWriteError<RW::Error, <C as DecodeError>::Error, <C as Encoder<C::Item>>::Error>,
+        >,
+    >
     where
         C: Decoder<'this> + Encoder<C::Item>,
         F: FnOnce(C::Item) -> Echo<C::Item>,
@@ -358,20 +363,22 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         let item = match this.maybe_next().await {
             Some(Ok(Some(item))) => item,
             Some(Ok(None)) => return Some(Ok(None)),
-            Some(Err(_)) => return Some(Err(())),
+            Some(Err(err)) => return Some(Err(ReadWriteError::Read(err))),
             None => return None,
         };
 
         match f(item) {
             Echo::Echo(item) => match self.send(item).await {
                 Ok(_) => Some(Ok(None)),
-                Err(_) => Some(Err(())),
+                Err(err) => Some(Err(ReadWriteError::Write(err))),
             },
             Echo::NoEcho(item) => Some(Ok(Some(item))),
         }
     }
 }
 
+/// TODO
+#[derive(Debug)]
 pub enum Echo<T> {
     Echo(T),
     NoEcho(T),

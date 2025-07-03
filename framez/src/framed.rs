@@ -3,8 +3,10 @@ use futures::{Sink, Stream};
 
 use crate::{
     FramedCore, ReadError, WriteError,
-    decode::Decoder,
+    decode::{DecodeError, Decoder},
     encode::Encoder,
+    error::ReadWriteError,
+    framed_core::Echo,
     state::{ReadState, ReadWriteState, WriteState},
 };
 
@@ -121,6 +123,24 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         RW: Read,
     {
         self.core.maybe_next().await
+    }
+
+    /// TODO
+    pub async fn maybe_next_echoed<'this, F>(
+        &'this mut self,
+        f: F,
+    ) -> Option<
+        Result<
+            Option<C::Item>,
+            ReadWriteError<RW::Error, <C as DecodeError>::Error, <C as Encoder<C::Item>>::Error>,
+        >,
+    >
+    where
+        C: Decoder<'this> + Encoder<C::Item>,
+        F: FnOnce(C::Item) -> Echo<C::Item>,
+        RW: Read + Write,
+    {
+        self.core.maybe_next_echoed(f).await
     }
 
     /// Converts the [`Framed`] into a stream of frames using the given `map` function.
@@ -403,7 +423,10 @@ mod tests {
     use embedded_io_adapters::tokio_1::FromTokio;
     use futures::{SinkExt, StreamExt};
 
-    use crate::{Framed, FramedRead, FramedWrite, codec::lines::StrLines, next};
+    use crate::{
+        Framed, FramedRead, FramedWrite, codec::lines::StrLines, framed_core::Echo, next,
+        next_echoed,
+    };
 
     #[tokio::test]
     #[ignore = "assert that next! macro works on Framed"]
@@ -576,5 +599,57 @@ mod tests {
                 _ = sink.send("Line").await;
             };
         }
+    }
+
+    #[tokio::test]
+    async fn echoed() {
+        let items = [
+            ".Hello", "World", ".Framez", "Rocks", "Rust", ".Panic!", "Error", "Unsafe", "!",
+        ];
+
+        let (reader, writer) = tokio::io::duplex(1024);
+
+        let reader = async move {
+            let read_buf = &mut [0u8; 32];
+            let write_buf = &mut [0u8; 32];
+
+            let mut framed =
+                Framed::new(StrLines::new(), FromTokio::new(reader), read_buf, write_buf);
+
+            while let Some(item) = next_echoed!(framed, |item| {
+                if item.starts_with('.') {
+                    Echo::Echo(item)
+                } else {
+                    Echo::NoEcho(item)
+                }
+            })
+            .transpose()
+            .expect("Failed to read frame")
+            {
+                assert!(!item.starts_with('.'));
+
+                if item == "!" {
+                    break;
+                }
+            }
+        };
+
+        let writer = async move {
+            let read_buf = &mut [0u8; 32];
+            let write_buf = &mut [0u8; 32];
+
+            let mut framed =
+                Framed::new(StrLines::new(), FromTokio::new(writer), read_buf, write_buf);
+
+            for item in items {
+                framed.send(item).await.expect("Failed to send frame");
+            }
+
+            while let Some(item) = next!(framed).transpose().expect("Failed to read frame") {
+                assert!(item.starts_with('.'));
+            }
+        };
+
+        tokio::join!(reader, writer);
     }
 }
