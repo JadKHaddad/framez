@@ -128,7 +128,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
     /// TODO
     pub async fn maybe_next_echoed<'this, F>(
         &'this mut self,
-        f: F,
+        echo: F,
     ) -> Option<
         Result<
             Option<C::Item>,
@@ -140,7 +140,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         F: FnOnce(C::Item) -> Echo<C::Item>,
         RW: Read + Write,
     {
-        self.core.maybe_next_echoed(f).await
+        self.core.maybe_next_echoed(echo).await
     }
 
     /// Converts the [`Framed`] into a stream of frames using the given `map` function.
