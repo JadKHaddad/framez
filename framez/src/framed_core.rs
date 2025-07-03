@@ -90,7 +90,7 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         C: Decoder<'this>,
         RW: Read,
     {
-        maybe_next(&mut self.state.read, &mut self.codec, &mut self.read_write).await
+        functions::maybe_next(&mut self.state.read, &mut self.codec, &mut self.read_write).await
     }
 
     /// See [`Framed::next`](crate::Framed::next) for docs.
@@ -103,7 +103,7 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         C: for<'a> Decoder<'a>,
         RW: Read,
     {
-        next(
+        functions::next(
             &mut self.state.read,
             &mut self.codec,
             &mut self.read_write,
@@ -141,7 +141,7 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         C: Encoder<I>,
         RW: Write,
     {
-        send(
+        functions::send(
             &mut self.state.write,
             &mut self.codec,
             &mut self.read_write,
@@ -181,16 +181,21 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         F: FnOnce(C::Item) -> Echo<C::Item>,
         RW: Read + Write,
     {
-        let item =
-            match maybe_next(&mut self.state.read, &mut self.codec, &mut self.read_write).await {
-                Some(Ok(Some(item))) => item,
-                Some(Ok(None)) => return Some(Ok(None)),
-                Some(Err(err)) => return Some(Err(ReadWriteError::Read(err))),
-                None => return None,
-            };
+        let item = match functions::maybe_next(
+            &mut self.state.read,
+            &mut self.codec,
+            &mut self.read_write,
+        )
+        .await
+        {
+            Some(Ok(Some(item))) => item,
+            Some(Ok(None)) => return Some(Ok(None)),
+            Some(Err(err)) => return Some(Err(ReadWriteError::Read(err))),
+            None => return None,
+        };
 
         match echo(item) {
-            Echo::Echo(item) => match send(
+            Echo::Echo(item) => match functions::send(
                 &mut self.state.write,
                 &mut self.codec,
                 &mut self.read_write,
@@ -206,45 +211,94 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
     }
 }
 
-async fn maybe_next<'buf, C, R>(
-    state: &'buf mut ReadState<'_>,
-    codec: &mut C,
-    read: &mut R,
-) -> Option<Result<Option<C::Item>, ReadError<R::Error, C::Error>>>
-where
-    C: Decoder<'buf>,
-    R: Read,
-{
-    trace!(target: READ, "maybe_next called");
+/// TODO
+#[derive(Debug)]
+pub enum Echo<T> {
+    /// Echo the item back to the writer.
+    Echo(T),
+    /// Do not echo the item back to the writer.
+    NoEcho(T),
+}
 
-    debug!(
-        target: READ,
-        "total_consumed: {}, index: {}, buffer: {:?}",
-        state.total_consumed,
-        state.index,
-        Formatter(&state.buffer[state.total_consumed..state.index])
-    );
+mod functions {
+    use super::*;
 
-    if state.shift {
-        state
-            .buffer
-            .copy_within(state.total_consumed..state.index, 0);
+    pub async fn maybe_next<'buf, C, R>(
+        state: &'buf mut ReadState<'_>,
+        codec: &mut C,
+        read: &mut R,
+    ) -> Option<Result<Option<C::Item>, ReadError<R::Error, C::Error>>>
+    where
+        C: Decoder<'buf>,
+        R: Read,
+    {
+        trace!(target: READ, "maybe_next called");
 
-        state.index -= state.total_consumed;
-        state.total_consumed = 0;
+        debug!(
+            target: READ,
+            "total_consumed: {}, index: {}, buffer: {:?}",
+            state.total_consumed,
+            state.index,
+            Formatter(&state.buffer[state.total_consumed..state.index])
+        );
 
-        trace!(target: READ, "Buffer shifted. copied: {}", state.framable());
+        if state.shift {
+            state
+                .buffer
+                .copy_within(state.total_consumed..state.index, 0);
 
-        state.shift = false;
+            state.index -= state.total_consumed;
+            state.total_consumed = 0;
 
-        return Some(Ok(None));
-    }
+            trace!(target: READ, "Buffer shifted. copied: {}", state.framable());
 
-    if state.is_framable {
-        if state.eof {
-            trace!(target: READ, "Framing on EOF");
+            state.shift = false;
 
-            match codec.decode_eof(&mut state.buffer[state.total_consumed..state.index]) {
+            return Some(Ok(None));
+        }
+
+        if state.is_framable {
+            if state.eof {
+                trace!(target: READ, "Framing on EOF");
+
+                match codec.decode_eof(&mut state.buffer[state.total_consumed..state.index]) {
+                    Ok(Some((item, size))) => {
+                        state.total_consumed += size;
+
+                        debug!(
+                            target: READ,
+                            "Frame decoded, consumed: {}, total_consumed: {}",
+                            size, state.total_consumed,
+                        );
+
+                        return Some(Ok(Some(item)));
+                    }
+                    Ok(None) => {
+                        debug!(target: READ, "No frame decoded");
+
+                        state.is_framable = false;
+
+                        if state.index != state.total_consumed {
+                            error!(target: READ, "Bytes remaining on stream");
+
+                            return Some(Err(ReadError::BytesRemainingOnStream));
+                        }
+
+                        return None;
+                    }
+                    Err(err) => {
+                        error!(target: READ, "Failed to decode frame");
+
+                        return Some(Err(ReadError::Decode(err)));
+                    }
+                };
+            }
+
+            trace!(target: READ, "Framing");
+
+            let buf_len = state.buffer.len();
+
+            match codec.decode(&mut state.buffer[state.total_consumed..state.index]) {
                 Ok(Some((item, size))) => {
                     state.total_consumed += size;
 
@@ -259,179 +313,134 @@ where
                 Ok(None) => {
                     debug!(target: READ, "No frame decoded");
 
+                    state.shift = state.index >= buf_len;
+
                     state.is_framable = false;
 
-                    if state.index != state.total_consumed {
-                        error!(target: READ, "Bytes remaining on stream");
-
-                        return Some(Err(ReadError::BytesRemainingOnStream));
-                    }
-
-                    return None;
+                    return Some(Ok(None));
                 }
                 Err(err) => {
                     error!(target: READ, "Failed to decode frame");
 
                     return Some(Err(ReadError::Decode(err)));
                 }
-            };
+            }
         }
 
-        trace!(target: READ, "Framing");
+        if state.index >= state.buffer.len() {
+            error!(target: READ, "Buffer too small");
 
-        let buf_len = state.buffer.len();
+            return Some(Err(ReadError::BufferTooSmall));
+        }
 
-        match codec.decode(&mut state.buffer[state.total_consumed..state.index]) {
-            Ok(Some((item, size))) => {
-                state.total_consumed += size;
+        trace!(target: READ, "Reading");
 
-                debug!(
-                    target: READ,
-                    "Frame decoded, consumed: {}, total_consumed: {}",
-                    size, state.total_consumed,
-                );
-
-                return Some(Ok(Some(item)));
-            }
-            Ok(None) => {
-                debug!(target: READ, "No frame decoded");
-
-                state.shift = state.index >= buf_len;
-
-                state.is_framable = false;
-
-                return Some(Ok(None));
-            }
+        match read.read(&mut state.buffer[state.index..]).await {
             Err(err) => {
-                error!(target: READ, "Failed to decode frame");
+                error!(target: READ, "Failed to read");
 
-                return Some(Err(ReadError::Decode(err)));
+                Some(Err(ReadError::IO(err)))
+            }
+            Ok(0) => {
+                warn!(target: READ, "Got EOF");
+
+                state.eof = true;
+
+                state.is_framable = true;
+
+                Some(Ok(None))
+            }
+            Ok(n) => {
+                debug!(target: READ, "Bytes read. bytes: {}", n);
+
+                state.index += n;
+
+                state.is_framable = true;
+
+                Some(Ok(None))
             }
         }
     }
 
-    if state.index >= state.buffer.len() {
-        error!(target: READ, "Buffer too small");
-
-        return Some(Err(ReadError::BufferTooSmall));
-    }
-
-    trace!(target: READ, "Reading");
-
-    match read.read(&mut state.buffer[state.index..]).await {
-        Err(err) => {
-            error!(target: READ, "Failed to read");
-
-            Some(Err(ReadError::IO(err)))
-        }
-        Ok(0) => {
-            warn!(target: READ, "Got EOF");
-
-            state.eof = true;
-
-            state.is_framable = true;
-
-            Some(Ok(None))
-        }
-        Ok(n) => {
-            debug!(target: READ, "Bytes read. bytes: {}", n);
-
-            state.index += n;
-
-            state.is_framable = true;
-
-            Some(Ok(None))
+    async fn maybe_next_mapped<'buf, C, R, U>(
+        state: &'buf mut ReadState<'_>,
+        codec: &mut C,
+        read: &mut R,
+        map: fn(<C as Decoder<'_>>::Item) -> U,
+    ) -> Option<Result<Option<U>, ReadError<R::Error, C::Error>>>
+    where
+        U: 'static,
+        C: for<'a> Decoder<'a>,
+        R: Read,
+    {
+        match maybe_next(state, codec, read).await {
+            Some(Ok(Some(item))) => Some(Ok(Some(map(item)))),
+            Some(Ok(None)) => Some(Ok(None)),
+            Some(Err(err)) => Some(Err(err)),
+            None => None,
         }
     }
-}
 
-async fn maybe_next_mapped<'buf, C, R, U>(
-    state: &'buf mut ReadState<'_>,
-    codec: &mut C,
-    read: &mut R,
-    map: fn(<C as Decoder<'_>>::Item) -> U,
-) -> Option<Result<Option<U>, ReadError<R::Error, C::Error>>>
-where
-    U: 'static,
-    C: for<'a> Decoder<'a>,
-    R: Read,
-{
-    match maybe_next(state, codec, read).await {
-        Some(Ok(Some(item))) => Some(Ok(Some(map(item)))),
-        Some(Ok(None)) => Some(Ok(None)),
-        Some(Err(err)) => Some(Err(err)),
-        None => None,
-    }
-}
-
-async fn next<'buf, C, R, U>(
-    state: &'buf mut ReadState<'_>,
-    codec: &mut C,
-    read: &mut R,
-    map: fn(<C as Decoder<'_>>::Item) -> U,
-) -> Option<Result<U, ReadError<R::Error, C::Error>>>
-where
-    U: 'static,
-    C: for<'a> Decoder<'a>,
-    R: Read,
-{
-    loop {
-        match maybe_next_mapped(state, codec, read, map).await {
-            Some(Ok(None)) => continue,
-            Some(Ok(Some(item))) => return Some(Ok(item)),
-            Some(Err(err)) => return Some(Err(err)),
-            None => return None,
+    pub async fn next<'buf, C, R, U>(
+        state: &'buf mut ReadState<'_>,
+        codec: &mut C,
+        read: &mut R,
+        map: fn(<C as Decoder<'_>>::Item) -> U,
+    ) -> Option<Result<U, ReadError<R::Error, C::Error>>>
+    where
+        U: 'static,
+        C: for<'a> Decoder<'a>,
+        R: Read,
+    {
+        loop {
+            match maybe_next_mapped(state, codec, read, map).await {
+                Some(Ok(None)) => continue,
+                Some(Ok(Some(item))) => return Some(Ok(item)),
+                Some(Err(err)) => return Some(Err(err)),
+                None => return None,
+            }
         }
     }
-}
 
-async fn send<C, W, I>(
-    state: &mut WriteState<'_>,
-    codec: &mut C,
-    write: &mut W,
-    item: I,
-) -> Result<(), WriteError<W::Error, C::Error>>
-where
-    C: Encoder<I>,
-    W: Write,
-{
-    match codec.encode(item, state.buffer) {
-        Ok(size) => match write.write_all(&state.buffer[..size]).await {
-            Ok(_) => {
-                trace!(target: WRITE, "Wrote. buffer: {:?}", Formatter(&state.buffer[..size]));
+    pub async fn send<C, W, I>(
+        state: &mut WriteState<'_>,
+        codec: &mut C,
+        write: &mut W,
+        item: I,
+    ) -> Result<(), WriteError<W::Error, C::Error>>
+    where
+        C: Encoder<I>,
+        W: Write,
+    {
+        match codec.encode(item, state.buffer) {
+            Ok(size) => match write.write_all(&state.buffer[..size]).await {
+                Ok(_) => {
+                    trace!(target: WRITE, "Wrote. buffer: {:?}", Formatter(&state.buffer[..size]));
 
-                match write.flush().await {
-                    Ok(_) => {
-                        debug!(target: WRITE, "Flushed. bytes: {}", size);
+                    match write.flush().await {
+                        Ok(_) => {
+                            debug!(target: WRITE, "Flushed. bytes: {}", size);
 
-                        Ok(())
-                    }
-                    Err(err) => {
-                        error!(target: WRITE, "Failed to flush");
+                            Ok(())
+                        }
+                        Err(err) => {
+                            error!(target: WRITE, "Failed to flush");
 
-                        Err(WriteError::IO(err))
+                            Err(WriteError::IO(err))
+                        }
                     }
                 }
-            }
+                Err(err) => {
+                    error!(target: WRITE, "Failed to write frame");
+
+                    Err(WriteError::IO(err))
+                }
+            },
             Err(err) => {
-                error!(target: WRITE, "Failed to write frame");
+                error!(target: WRITE, "Failed to encode frame");
 
-                Err(WriteError::IO(err))
+                Err(WriteError::Encode(err))
             }
-        },
-        Err(err) => {
-            error!(target: WRITE, "Failed to encode frame");
-
-            Err(WriteError::Encode(err))
         }
     }
-}
-
-/// TODO
-#[derive(Debug)]
-pub enum Echo<T> {
-    /// Echo the item back to the writer.
-    Echo(T),
-    /// Do not echo the item back to the writer.
-    NoEcho(T),
 }
