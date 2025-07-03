@@ -1,8 +1,3 @@
-use core::{
-    borrow::{Borrow, BorrowMut},
-    marker::PhantomData,
-};
-
 use embedded_io_async::{Read, Write};
 use futures::{Sink, Stream};
 
@@ -11,7 +6,7 @@ use crate::{
     decode::Decoder,
     encode::Encoder,
     logging::{debug, error, trace, warn},
-    state::{ReadState, WriteState},
+    state::ReadWriteState,
 };
 
 #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
@@ -25,20 +20,18 @@ const WRITE: &str = "framez::write";
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct FramedCore<'this, C, RW, S> {
+pub struct FramedCore<'buf, C, RW> {
     codec: C,
     read_write: RW,
-    state: S,
-    buf: PhantomData<&'this ()>,
+    state: ReadWriteState<'buf>,
 }
 
-impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
-    pub const fn new(codec: C, read_write: RW, state: S) -> Self {
+impl<'buf, C, RW> FramedCore<'buf, C, RW> {
+    pub const fn new(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
         Self {
             codec,
             read_write,
             state,
-            buf: PhantomData,
         }
     }
 
@@ -68,39 +61,35 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
 
     /// Consumes the [`FramedCore`] and returns the `codec` and `reader/writer` and state.
     #[inline]
-    pub fn into_parts(self) -> (C, RW, S) {
+    pub fn into_parts(self) -> (C, RW, ReadWriteState<'buf>) {
         (self.codec, self.read_write, self.state)
     }
 
     #[inline]
     /// Creates a new [`FramedCore`] from its parts.
-    pub const fn from_parts(codec: C, read_write: RW, state: S) -> Self {
+    pub const fn from_parts(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
         Self {
             codec,
             read_write,
             state,
-            buf: PhantomData,
         }
     }
 
     /// Returns the number of bytes that can be framed.
     #[inline]
-    pub fn framable(&self) -> usize
-    where
-        S: Borrow<ReadState<'buf>>,
-    {
-        self.state.borrow().framable()
+    pub const fn framable(&self) -> usize {
+        self.state.read.framable()
     }
 
+    /// See [`Framed::maybe_next`](crate::Framed::maybe_next) for docs.
     pub async fn maybe_next<'this>(
         &'this mut self,
     ) -> Option<Result<Option<C::Item>, ReadError<RW::Error, C::Error>>>
     where
         C: Decoder<'this>,
         RW: Read,
-        S: BorrowMut<ReadState<'buf>>,
     {
-        let state: &mut ReadState = self.state.borrow_mut();
+        let state = &mut self.state.read;
 
         trace!(target: READ, "maybe_next called");
 
@@ -246,7 +235,6 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         U: 'static,
         C: for<'a> Decoder<'a>,
         RW: Read,
-        S: BorrowMut<ReadState<'buf>>,
     {
         match self.maybe_next().await {
             Some(Ok(Some(item))) => Some(Ok(Some(map(item)))),
@@ -256,6 +244,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         }
     }
 
+    /// See [`Framed::next`](crate::Framed::next) for docs.
     pub async fn next<'this, U>(
         &'this mut self,
         map: fn(<C as Decoder<'_>>::Item) -> U,
@@ -264,7 +253,6 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         U: 'static,
         C: for<'a> Decoder<'a>,
         RW: Read,
-        S: BorrowMut<ReadState<'buf>>,
     {
         loop {
             match self.maybe_next_mapped(map).await {
@@ -276,6 +264,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         }
     }
 
+    /// See [`Framed::stream`](crate::Framed::stream) for docs.
     pub fn stream<U>(
         &mut self,
         map: fn(<C as Decoder<'_>>::Item) -> U,
@@ -284,7 +273,6 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         U: 'static,
         C: for<'a> Decoder<'a>,
         RW: Read,
-        S: BorrowMut<ReadState<'buf>>,
     {
         futures::stream::unfold((self, false), move |(this, errored)| async move {
             if errored {
@@ -299,13 +287,13 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         })
     }
 
+    /// See [`Framed::send`](crate::Framed::send) for docs.
     pub async fn send<I>(&mut self, item: I) -> Result<(), WriteError<RW::Error, C::Error>>
     where
         C: Encoder<I>,
         RW: Write,
-        S: BorrowMut<WriteState<'buf>>,
     {
-        let state: &mut WriteState = self.state.borrow_mut();
+        let state = &mut self.state.write;
 
         match self.codec.encode(item, state.buffer) {
             Ok(size) => match self.read_write.write_all(&state.buffer[..size]).await {
@@ -339,6 +327,7 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         }
     }
 
+    /// See [`Framed::sink`](crate::Framed::sink) for docs.
     pub fn sink<'this, I>(
         &'this mut self,
     ) -> impl Sink<I, Error = WriteError<RW::Error, C::Error>> + 'this
@@ -346,7 +335,6 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         I: 'this,
         C: Encoder<I>,
         RW: Write,
-        S: BorrowMut<WriteState<'buf>>,
     {
         futures::sink::unfold(self, |this, item: I| async move {
             this.send(item).await?;
@@ -355,12 +343,15 @@ impl<'buf, C, RW, S> FramedCore<'buf, C, RW, S> {
         })
     }
 
-    pub async fn echo<'this, F>(&'this mut self, f: F) -> Option<Result<Option<C::Item>, ()>>
+    // TODO
+    pub async fn maybe_next_echoed<'this, F>(
+        &'this mut self,
+        f: F,
+    ) -> Option<Result<Option<C::Item>, ()>>
     where
         C: Decoder<'this> + Encoder<C::Item>,
         F: FnOnce(C::Item) -> Echo<C::Item>,
         RW: Read + Write,
-        S: BorrowMut<ReadState<'buf>> + BorrowMut<WriteState<'buf>>,
     {
         let this: &mut Self = unsafe { core::mem::transmute_copy(&self) };
 
