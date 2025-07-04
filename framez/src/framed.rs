@@ -34,6 +34,44 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         }
     }
 
+    /// Returns reference to the codec.
+    #[inline]
+    pub const fn codec(&self) -> &C {
+        self.core.codec()
+    }
+
+    /// Returns mutable reference to the codec.
+    #[inline]
+    pub const fn codec_mut(&mut self) -> &mut C {
+        self.core.codec_mut()
+    }
+
+    /// Returns reference to the reader/writer.
+    #[inline]
+    pub const fn inner(&self) -> &RW {
+        self.core.inner()
+    }
+
+    /// Returns mutable reference to the reader/writer.
+    #[inline]
+    pub const fn inner_mut(&mut self) -> &mut RW {
+        self.core.inner_mut()
+    }
+
+    /// Consumes the [`Framed`] and returns the `codec` and `reader/writer` and state.
+    #[inline]
+    pub fn into_parts(self) -> (C, RW, ReadWriteState<'buf>) {
+        self.core.into_parts()
+    }
+
+    #[inline]
+    /// Creates a new [`Framed`] from its parts.
+    pub const fn from_parts(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(codec, read_write, state),
+        }
+    }
+
     /// Returns the number of bytes that can be framed.
     #[inline]
     pub const fn framable(&self) -> usize {
@@ -186,6 +224,50 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
         }
     }
 
+    /// Returns reference to the codec.
+    #[inline]
+    pub const fn codec(&self) -> &C {
+        self.core.codec()
+    }
+
+    /// Returns mutable reference to the codec.
+    #[inline]
+    pub const fn codec_mut(&mut self) -> &mut C {
+        self.core.codec_mut()
+    }
+
+    /// Returns reference to the reader.
+    #[inline]
+    pub const fn inner(&self) -> &R {
+        self.core.inner()
+    }
+
+    /// Returns mutable reference to the reader.
+    #[inline]
+    pub const fn inner_mut(&mut self) -> &mut R {
+        self.core.inner_mut()
+    }
+
+    /// Consumes the [`FramedRead`] and returns the `codec` and `reader` and state.
+    #[inline]
+    pub fn into_parts(self) -> (C, R, ReadState<'buf>) {
+        let (codec, reader, state) = self.core.into_parts();
+
+        (codec, reader, state.read)
+    }
+
+    #[inline]
+    /// Creates a new [`FramedRead`] from its parts.
+    pub const fn from_parts(codec: C, read: R, state: ReadState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(
+                codec,
+                read,
+                ReadWriteState::new(state, WriteState::empty()),
+            ),
+        }
+    }
+
     /// Returns the number of bytes that can be framed.
     #[inline]
     pub const fn framable(&self) -> usize {
@@ -246,6 +328,50 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
                 codec,
                 writer,
                 ReadWriteState::new(ReadState::empty(), WriteState::new(buffer)),
+            ),
+        }
+    }
+
+    /// Returns reference to the codec.
+    #[inline]
+    pub const fn codec(&self) -> &C {
+        self.core.codec()
+    }
+
+    /// Returns mutable reference to the codec.
+    #[inline]
+    pub const fn codec_mut(&mut self) -> &mut C {
+        self.core.codec_mut()
+    }
+
+    /// Returns reference to the writer.
+    #[inline]
+    pub const fn inner(&self) -> &W {
+        self.core.inner()
+    }
+
+    /// Returns mutable reference to the writer.
+    #[inline]
+    pub const fn inner_mut(&mut self) -> &mut W {
+        self.core.inner_mut()
+    }
+
+    /// Consumes the [`FramedWrite`] and returns the `codec` and `writer` and state.
+    #[inline]
+    pub fn into_parts(self) -> (C, W, WriteState<'buf>) {
+        let (codec, writer, state) = self.core.into_parts();
+
+        (codec, writer, state.write)
+    }
+
+    #[inline]
+    /// Creates a new [`FramedWrite`] from its parts.
+    pub const fn from_parts(codec: C, write: W, state: WriteState<'buf>) -> Self {
+        Self {
+            core: FramedCore::from_parts(
+                codec,
+                write,
+                ReadWriteState::new(ReadState::empty(), state),
             ),
         }
     }

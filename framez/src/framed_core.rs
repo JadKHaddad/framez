@@ -54,10 +54,10 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
 
     #[inline]
     /// Creates a new [`FramedCore`] from its parts.
-    pub const fn from_parts(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
+    pub const fn from_parts(codec: C, inner: RW, state: ReadWriteState<'buf>) -> Self {
         Self {
             codec,
-            inner: read_write,
+            inner,
             state,
         }
     }
