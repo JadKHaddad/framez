@@ -2,27 +2,22 @@ use embedded_io_async::{Read, Write};
 use futures::{Sink, Stream};
 
 use crate::{
-    ReadError, WriteError,
-    decode::{DecodeError, Decoder},
-    encode::Encoder,
-    error::ReadWriteError,
-    functions,
-    state::ReadWriteState,
+    ReadError, WriteError, decode::Decoder, encode::Encoder, functions, state::ReadWriteState,
 };
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedCore<'buf, C, RW> {
     pub codec: C,
-    pub read_write: RW,
+    pub inner: RW,
     pub state: ReadWriteState<'buf>,
 }
 
 impl<'buf, C, RW> FramedCore<'buf, C, RW> {
-    pub const fn new(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
+    pub const fn new(codec: C, inner: RW, state: ReadWriteState<'buf>) -> Self {
         Self {
             codec,
-            read_write,
+            inner,
             state,
         }
     }
@@ -42,19 +37,19 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
     /// Returns reference to the reader/writer.
     #[inline]
     pub const fn inner(&self) -> &RW {
-        &self.read_write
+        &self.inner
     }
 
     /// Returns mutable reference to the reader/writer.
     #[inline]
     pub const fn inner_mut(&mut self) -> &mut RW {
-        &mut self.read_write
+        &mut self.inner
     }
 
     /// Consumes the [`FramedCore`] and returns the `codec` and `reader/writer` and state.
     #[inline]
     pub fn into_parts(self) -> (C, RW, ReadWriteState<'buf>) {
-        (self.codec, self.read_write, self.state)
+        (self.codec, self.inner, self.state)
     }
 
     #[inline]
@@ -62,7 +57,7 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
     pub const fn from_parts(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
         Self {
             codec,
-            read_write,
+            inner: read_write,
             state,
         }
     }
@@ -81,7 +76,7 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         C: Decoder<'this>,
         RW: Read,
     {
-        functions::maybe_next(&mut self.state.read, &mut self.codec, &mut self.read_write).await
+        functions::maybe_next(&mut self.state.read, &mut self.codec, &mut self.inner).await
     }
 
     /// See [`Framed::next`](crate::Framed::next) for docs.
@@ -94,13 +89,7 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         C: for<'a> Decoder<'a>,
         RW: Read,
     {
-        functions::next(
-            &mut self.state.read,
-            &mut self.codec,
-            &mut self.read_write,
-            map,
-        )
-        .await
+        functions::next(&mut self.state.read, &mut self.codec, &mut self.inner, map).await
     }
 
     /// See [`Framed::stream`](crate::Framed::stream) for docs.
@@ -135,7 +124,7 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
         functions::send(
             &mut self.state.write,
             &mut self.codec,
-            &mut self.read_write,
+            &mut self.inner,
             item,
         )
         .await
@@ -156,59 +145,4 @@ impl<'buf, C, RW> FramedCore<'buf, C, RW> {
             Ok::<_, WriteError<RW::Error, C::Error>>(this)
         })
     }
-
-    /// See [`Framed::maybe_next_echoed`](crate::Framed::maybe_next_echoed) for docs.
-    pub async fn maybe_next_echoed<'this, F>(
-        &'this mut self,
-        echo: F,
-    ) -> Option<
-        Result<
-            Option<C::Item>,
-            ReadWriteError<RW::Error, <C as DecodeError>::Error, <C as Encoder<C::Item>>::Error>,
-        >,
-    >
-    where
-        C: Decoder<'this> + Encoder<C::Item>,
-        F: FnOnce(C::Item) -> Echo<C::Item>,
-        RW: Read + Write,
-    {
-        let item = match functions::maybe_next(
-            &mut self.state.read,
-            &mut self.codec,
-            &mut self.read_write,
-        )
-        .await
-        {
-            Some(Ok(Some(item))) => item,
-            Some(Ok(None)) => return Some(Ok(None)),
-            Some(Err(err)) => return Some(Err(ReadWriteError::Read(err))),
-            None => return None,
-        };
-
-        match echo(item) {
-            Echo::Echo(item) => match functions::send(
-                &mut self.state.write,
-                &mut self.codec,
-                &mut self.read_write,
-                item,
-            )
-            .await
-            {
-                Ok(_) => Some(Ok(None)),
-                Err(err) => Some(Err(ReadWriteError::Write(err))),
-            },
-            Echo::NoEcho(item) => Some(Ok(Some(item))),
-        }
-    }
-}
-
-/// Wether to echo the item back to the writer or not.
-///
-/// See [`Framed::maybe_next_echoed`](crate::Framed::maybe_next_echoed).
-#[derive(Debug)]
-pub enum Echo<T> {
-    /// Echo the item back to the writer.
-    Echo(T),
-    /// Do not echo the item back to the writer.
-    NoEcho(T),
 }

@@ -30,13 +30,12 @@ mod framed;
 pub use framed::{Framed, FramedRead, FramedWrite};
 
 mod framed_core;
-pub use framed_core::Echo;
 use framed_core::FramedCore;
 
 pub mod functions;
 
 mod error;
-pub use error::{ReadError, ReadWriteError, WriteError};
+pub use error::{ReadError, WriteError};
 
 pub mod state;
 

@@ -65,35 +65,3 @@ where
     E: core::fmt::Display + core::fmt::Debug,
 {
 }
-
-/// An error that can occur while reading or writing a frame.
-#[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum ReadWriteError<I, A, B> {
-    /// An error occurred while reading a frame.
-    Read(ReadError<I, A>),
-    /// An error occurred while writing a frame.
-    Write(WriteError<I, B>),
-}
-
-impl<I, A, B> core::fmt::Display for ReadWriteError<I, A, B>
-where
-    I: core::fmt::Display,
-    A: core::fmt::Display,
-    B: core::fmt::Display,
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Read(err) => write!(f, "Read error: {err}"),
-            Self::Write(err) => write!(f, "Write error: {err}"),
-        }
-    }
-}
-
-impl<I, A, B> core::error::Error for ReadWriteError<I, A, B>
-where
-    I: core::fmt::Display + core::fmt::Debug,
-    A: core::fmt::Display + core::fmt::Debug,
-    B: core::fmt::Display + core::fmt::Debug,
-{
-}

@@ -3,10 +3,8 @@ use futures::{Sink, Stream};
 
 use crate::{
     FramedCore, ReadError, WriteError,
-    decode::{DecodeError, Decoder},
+    decode::Decoder,
     encode::Encoder,
-    error::ReadWriteError,
-    framed_core::Echo,
     state::{ReadState, ReadWriteState, WriteState},
 };
 
@@ -19,7 +17,7 @@ pub struct Framed<'buf, C, RW> {
 }
 
 impl<'buf, C, RW> Framed<'buf, C, RW> {
-    /// Creates a new [`Framed`] with the given `coded` and `reader/writer`.
+    /// Creates a new [`Framed`] with the given `codec` and `reader/writer`.
     #[inline]
     pub const fn new(
         codec: C,
@@ -36,47 +34,9 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         }
     }
 
-    /// Returns reference to the codec.
-    #[inline]
-    pub const fn codec(&self) -> &C {
-        self.core.codec()
-    }
-
-    /// Returns mutable reference to the codec.
-    #[inline]
-    pub const fn codec_mut(&mut self) -> &mut C {
-        self.core.codec_mut()
-    }
-
-    /// Returns reference to the reader/writer.
-    #[inline]
-    pub const fn inner(&self) -> &RW {
-        self.core.inner()
-    }
-
-    /// Returns mutable reference to the reader/writer.
-    #[inline]
-    pub const fn inner_mut(&mut self) -> &mut RW {
-        self.core.inner_mut()
-    }
-
-    /// Consumes the [`Framed`] and returns the `codec` and `reader/writer` and state.
-    #[inline]
-    pub fn into_parts(self) -> (C, RW, ReadWriteState<'buf>) {
-        self.core.into_parts()
-    }
-
-    #[inline]
-    /// Creates a new [`Framed`] from its parts.
-    pub const fn from_parts(codec: C, read_write: RW, state: ReadWriteState<'buf>) -> Self {
-        Self {
-            core: FramedCore::from_parts(codec, read_write, state),
-        }
-    }
-
     /// Returns the number of bytes that can be framed.
     #[inline]
-    pub fn framable(&self) -> usize {
+    pub const fn framable(&self) -> usize {
         self.core.framable()
     }
 
@@ -123,67 +83,6 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
         RW: Read,
     {
         self.core.maybe_next().await
-    }
-
-    /// Tries to read a frame from the underlying reader and echoes it back to the writer if the `echo` function returns `Echo::Echo`.
-    ///
-    /// # Return value
-    ///
-    /// - `Some(Ok(None))` if the buffer is not framable or the frame was echoed. Call `maybe_next_echoed` again to read more bytes.
-    /// - `Some(Ok(Some(frame)))` if a frame was successfully decoded and not echoed. Call `maybe_next_echoed` again to read more bytes.
-    /// - `Some(Err(error))` if an error occurred. The caller should stop reading.
-    /// - `None` if eof was reached. The caller should stop reading.
-    ///
-    /// # Usage
-    ///
-    /// See [`next!`](crate::next_echoed!).
-    ///
-    /// # Example
-    ///
-    /// Echo back [`str`] frames starting with a dot (`.`).
-    ///
-    /// ```rust
-    /// use core::{error::Error};
-    ///
-    /// use framez::{Echo, Framed, codec::lines::StrLines, mock::Noop, next_echoed};  
-    ///
-    /// async fn read() -> Result<(), Box<dyn Error>> {
-    ///     let r_buf = &mut [0u8; 1024];
-    ///     let w_buf = &mut [0u8; 1024];
-    ///
-    ///     let mut framed = Framed::new(StrLines::new(), Noop, r_buf, w_buf);
-    ///
-    ///     while let Some(item) = next_echoed!(framed, |item| {
-    ///         if item.starts_with('.') {
-    ///             return Echo::Echo(item);
-    ///         }
-    ///
-    ///         Echo::NoEcho(item)
-    ///     })
-    ///     .transpose()? {
-    ///         assert!(!item.starts_with('.'));
-    ///
-    ///         println!("Frame: {}", item);
-    ///     }
-    ///
-    ///     Ok(())
-    /// }
-    /// ```
-    pub async fn maybe_next_echoed<'this, F>(
-        &'this mut self,
-        echo: F,
-    ) -> Option<
-        Result<
-            Option<C::Item>,
-            ReadWriteError<RW::Error, <C as DecodeError>::Error, <C as Encoder<C::Item>>::Error>,
-        >,
-    >
-    where
-        C: Decoder<'this> + Encoder<C::Item>,
-        F: FnOnce(C::Item) -> Echo<C::Item>,
-        RW: Read + Write,
-    {
-        self.core.maybe_next_echoed(echo).await
     }
 
     /// Converts the [`Framed`] into a stream of frames using the given `map` function.
@@ -271,7 +170,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedRead<'buf, C, R> {
-    core: FramedCore<'buf, C, R>,
+    pub core: FramedCore<'buf, C, R>,
 }
 
 impl<'buf, C, R> FramedRead<'buf, C, R> {
@@ -287,48 +186,10 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
         }
     }
 
-    /// Returns reference to the codec.
+    /// Returns the number of bytes that can be framed.
     #[inline]
-    pub const fn codec(&self) -> &C {
-        self.core.codec()
-    }
-
-    /// Returns mutable reference to the codec.
-    #[inline]
-    pub const fn codec_mut(&mut self) -> &mut C {
-        self.core.codec_mut()
-    }
-
-    /// Returns reference to the reader.
-    #[inline]
-    pub const fn inner(&self) -> &R {
-        self.core.inner()
-    }
-
-    /// Returns mutable reference to the reader.
-    #[inline]
-    pub const fn inner_mut(&mut self) -> &mut R {
-        self.core.inner_mut()
-    }
-
-    /// Consumes the [`FramedRead`] and returns the `codec` and `reader` and state.
-    #[inline]
-    pub fn into_parts(self) -> (C, R, ReadState<'buf>) {
-        let (codec, reader, state) = self.core.into_parts();
-
-        (codec, reader, state.read)
-    }
-
-    #[inline]
-    /// Creates a new [`FramedRead`] from its parts.
-    pub const fn from_parts(codec: C, read: R, state: ReadState<'buf>) -> Self {
-        Self {
-            core: FramedCore::from_parts(
-                codec,
-                read,
-                ReadWriteState::new(state, WriteState::empty()),
-            ),
-        }
+    pub const fn framable(&self) -> usize {
+        self.core.framable()
     }
 
     /// See [`Framed::maybe_next`].
@@ -373,7 +234,7 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedWrite<'buf, C, W> {
-    core: FramedCore<'buf, C, W>,
+    pub core: FramedCore<'buf, C, W>,
 }
 
 impl<'buf, C, W> FramedWrite<'buf, C, W> {
@@ -385,50 +246,6 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
                 codec,
                 writer,
                 ReadWriteState::new(ReadState::empty(), WriteState::new(buffer)),
-            ),
-        }
-    }
-
-    /// Returns reference to the codec.
-    #[inline]
-    pub const fn codec(&self) -> &C {
-        self.core.codec()
-    }
-
-    /// Returns mutable reference to the codec.
-    #[inline]
-    pub const fn codec_mut(&mut self) -> &mut C {
-        self.core.codec_mut()
-    }
-
-    /// Returns reference to the writer.
-    #[inline]
-    pub const fn inner(&self) -> &W {
-        self.core.inner()
-    }
-
-    /// Returns mutable reference to the writer.
-    #[inline]
-    pub const fn inner_mut(&mut self) -> &mut W {
-        self.core.inner_mut()
-    }
-
-    /// Consumes the [`FramedWrite`] and returns the `codec` and `writer` and state.
-    #[inline]
-    pub fn into_parts(self) -> (C, W, WriteState<'buf>) {
-        let (codec, writer, state) = self.core.into_parts();
-
-        (codec, writer, state.write)
-    }
-
-    #[inline]
-    /// Creates a new [`FramedWrite`] from its parts.
-    pub const fn from_parts(codec: C, write: W, state: WriteState<'buf>) -> Self {
-        Self {
-            core: FramedCore::from_parts(
-                codec,
-                write,
-                ReadWriteState::new(ReadState::empty(), state),
             ),
         }
     }
@@ -466,10 +283,7 @@ mod tests {
     use embedded_io_adapters::tokio_1::FromTokio;
     use futures::{SinkExt, StreamExt};
 
-    use crate::{
-        Framed, FramedRead, FramedWrite, codec::lines::StrLines, framed_core::Echo, next,
-        next_echoed,
-    };
+    use crate::{Framed, FramedRead, FramedWrite, codec::lines::StrLines, next};
 
     #[tokio::test]
     #[ignore = "assert that next! macro works on Framed"]
@@ -642,57 +456,5 @@ mod tests {
                 _ = sink.send("Line").await;
             };
         }
-    }
-
-    #[tokio::test]
-    async fn echoed() {
-        let items = [
-            ".Hello", "World", ".Framez", "Rocks", "Rust", ".Panic!", "Error", "Unsafe", "!",
-        ];
-
-        let (reader, writer) = tokio::io::duplex(1024);
-
-        let reader = async move {
-            let read_buf = &mut [0u8; 32];
-            let write_buf = &mut [0u8; 32];
-
-            let mut framed =
-                Framed::new(StrLines::new(), FromTokio::new(reader), read_buf, write_buf);
-
-            while let Some(item) = next_echoed!(framed, |item| {
-                if item.starts_with('.') {
-                    Echo::Echo(item)
-                } else {
-                    Echo::NoEcho(item)
-                }
-            })
-            .transpose()
-            .expect("Failed to read frame")
-            {
-                assert!(!item.starts_with('.'));
-
-                if item == "!" {
-                    break;
-                }
-            }
-        };
-
-        let writer = async move {
-            let read_buf = &mut [0u8; 32];
-            let write_buf = &mut [0u8; 32];
-
-            let mut framed =
-                Framed::new(StrLines::new(), FromTokio::new(writer), read_buf, write_buf);
-
-            for item in items {
-                framed.send(item).await.expect("Failed to send frame");
-            }
-
-            while let Some(item) = next!(framed).transpose().expect("Failed to read frame") {
-                assert!(item.starts_with('.'));
-            }
-        };
-
-        tokio::join!(reader, writer);
     }
 }
