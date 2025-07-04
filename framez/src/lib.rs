@@ -41,7 +41,7 @@ pub mod state;
 
 pub(crate) mod logging;
 
-mod next;
+mod macros;
 
 #[doc(hidden)]
 pub mod mock;
