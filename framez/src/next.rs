@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! maybe_next {
-    ($framed:ident) => {{
+    ($framed:expr) => {{
         $crate::functions::maybe_next(
             &mut $framed.core.state.read,
             &mut $framed.core.codec,
@@ -19,7 +19,7 @@ macro_rules! maybe_next {
 /// - `None` if eof was reached. The caller should stop reading.
 #[macro_export]
 macro_rules! next {
-    ($framed:ident) => {{
+    ($framed:expr) => {{
         'next: loop {
             match $crate::maybe_next!($framed) {
                 Some(Ok(None)) => continue 'next,
@@ -33,7 +33,7 @@ macro_rules! next {
 
 #[macro_export]
 macro_rules! send {
-    ($framed:ident, $item:expr) => {{
+    ($framed:expr, $item:expr) => {{
         $crate::functions::send(
             &mut $framed.core.state.write,
             &mut $framed.core.codec,
