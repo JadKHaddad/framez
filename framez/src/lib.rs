@@ -32,6 +32,8 @@ pub use framed::{Framed, FramedRead, FramedWrite};
 mod framed_core;
 use framed_core::FramedCore;
 
+pub mod functions;
+
 mod error;
 pub use error::{ReadError, WriteError};
 
@@ -39,7 +41,7 @@ pub mod state;
 
 pub(crate) mod logging;
 
-mod next;
+mod macros;
 
 #[doc(hidden)]
 pub mod mock;

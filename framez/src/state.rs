@@ -1,7 +1,5 @@
 //! Internal states for reading and writing frames.
 
-use core::borrow::{Borrow, BorrowMut};
-
 /// Internal state for reading frames.
 #[derive(Debug)]
 pub struct ReadState<'buf> {
@@ -103,29 +101,5 @@ impl<'buf> ReadWriteState<'buf> {
     #[inline]
     pub const fn reset(self) -> Self {
         Self::new(self.read.reset(), self.write.reset())
-    }
-}
-
-impl<'buf> Borrow<ReadState<'buf>> for ReadWriteState<'buf> {
-    fn borrow(&self) -> &ReadState<'buf> {
-        &self.read
-    }
-}
-
-impl<'buf> BorrowMut<ReadState<'buf>> for ReadWriteState<'buf> {
-    fn borrow_mut(&mut self) -> &mut ReadState<'buf> {
-        &mut self.read
-    }
-}
-
-impl<'buf> Borrow<WriteState<'buf>> for ReadWriteState<'buf> {
-    fn borrow(&self) -> &WriteState<'buf> {
-        &self.write
-    }
-}
-
-impl<'buf> BorrowMut<WriteState<'buf>> for ReadWriteState<'buf> {
-    fn borrow_mut(&mut self) -> &mut WriteState<'buf> {
-        &mut self.write
     }
 }

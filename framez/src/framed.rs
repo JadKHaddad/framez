@@ -13,11 +13,15 @@ use crate::{
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Framed<'buf, C, RW> {
-    core: FramedCore<'buf, C, RW, ReadWriteState<'buf>>,
+    /// The core framed implementation.
+    ///
+    /// This field is made public to be used in the [`functions`](crate::functions) module for library authors.
+    /// If you are using this crate as a user, you should probably not care about this field.
+    pub core: FramedCore<'buf, C, RW>,
 }
 
 impl<'buf, C, RW> Framed<'buf, C, RW> {
-    /// Creates a new [`Framed`] with the given `coded` and `reader/writer`.
+    /// Creates a new [`Framed`] with the given `codec` and `reader/writer`.
     #[inline]
     pub const fn new(
         codec: C,
@@ -74,7 +78,7 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
 
     /// Returns the number of bytes that can be framed.
     #[inline]
-    pub fn framable(&self) -> usize {
+    pub const fn framable(&self) -> usize {
         self.core.framable()
     }
 
@@ -208,7 +212,11 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedRead<'buf, C, R> {
-    core: FramedCore<'buf, C, R, ReadState<'buf>>,
+    /// The core framed implementation.
+    ///
+    /// This field is made public to be used in the [`functions`](crate::functions) module for library authors.
+    /// If you are using this crate as a user, you should probably not care about this field.
+    pub core: FramedCore<'buf, C, R>,
 }
 
 impl<'buf, C, R> FramedRead<'buf, C, R> {
@@ -216,7 +224,11 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
     #[inline]
     pub const fn new(codec: C, reader: R, buffer: &'buf mut [u8]) -> Self {
         Self {
-            core: FramedCore::new(codec, reader, ReadState::new(buffer)),
+            core: FramedCore::new(
+                codec,
+                reader,
+                ReadWriteState::new(ReadState::new(buffer), WriteState::empty()),
+            ),
         }
     }
 
@@ -247,15 +259,27 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
     /// Consumes the [`FramedRead`] and returns the `codec` and `reader` and state.
     #[inline]
     pub fn into_parts(self) -> (C, R, ReadState<'buf>) {
-        self.core.into_parts()
+        let (codec, reader, state) = self.core.into_parts();
+
+        (codec, reader, state.read)
     }
 
     #[inline]
     /// Creates a new [`FramedRead`] from its parts.
     pub const fn from_parts(codec: C, read: R, state: ReadState<'buf>) -> Self {
         Self {
-            core: FramedCore::from_parts(codec, read, state),
+            core: FramedCore::from_parts(
+                codec,
+                read,
+                ReadWriteState::new(state, WriteState::empty()),
+            ),
         }
+    }
+
+    /// Returns the number of bytes that can be framed.
+    #[inline]
+    pub const fn framable(&self) -> usize {
+        self.core.framable()
     }
 
     /// See [`Framed::maybe_next`].
@@ -300,7 +324,11 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedWrite<'buf, C, W> {
-    core: FramedCore<'buf, C, W, WriteState<'buf>>,
+    /// The core framed implementation.
+    ///
+    /// This field is made public to be used in the [`functions`](crate::functions) module for library authors.
+    /// If you are using this crate as a user, you should probably not care about this field.
+    pub core: FramedCore<'buf, C, W>,
 }
 
 impl<'buf, C, W> FramedWrite<'buf, C, W> {
@@ -308,7 +336,11 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
     #[inline]
     pub const fn new(codec: C, writer: W, buffer: &'buf mut [u8]) -> Self {
         Self {
-            core: FramedCore::new(codec, writer, WriteState::new(buffer)),
+            core: FramedCore::new(
+                codec,
+                writer,
+                ReadWriteState::new(ReadState::empty(), WriteState::new(buffer)),
+            ),
         }
     }
 
@@ -339,14 +371,20 @@ impl<'buf, C, W> FramedWrite<'buf, C, W> {
     /// Consumes the [`FramedWrite`] and returns the `codec` and `writer` and state.
     #[inline]
     pub fn into_parts(self) -> (C, W, WriteState<'buf>) {
-        self.core.into_parts()
+        let (codec, writer, state) = self.core.into_parts();
+
+        (codec, writer, state.write)
     }
 
     #[inline]
     /// Creates a new [`FramedWrite`] from its parts.
     pub const fn from_parts(codec: C, write: W, state: WriteState<'buf>) -> Self {
         Self {
-            core: FramedCore::from_parts(codec, write, state),
+            core: FramedCore::from_parts(
+                codec,
+                write,
+                ReadWriteState::new(ReadState::empty(), state),
+            ),
         }
     }
 
