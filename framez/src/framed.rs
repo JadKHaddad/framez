@@ -13,6 +13,10 @@ use crate::{
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Framed<'buf, C, RW> {
+    /// The core framed implementation.
+    ///
+    /// This field is made public to be used in the [`functions`](crate::functions) module for library authors.
+    /// If you are using this crate as a user, you should probably not care about this field.
     pub core: FramedCore<'buf, C, RW>,
 }
 
@@ -208,6 +212,10 @@ impl<'buf, C, RW> Framed<'buf, C, RW> {
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedRead<'buf, C, R> {
+    /// The core framed implementation.
+    ///
+    /// This field is made public to be used in the [`functions`](crate::functions) module for library authors.
+    /// If you are using this crate as a user, you should probably not care about this field.
     pub core: FramedCore<'buf, C, R>,
 }
 
@@ -316,6 +324,10 @@ impl<'buf, C, R> FramedRead<'buf, C, R> {
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FramedWrite<'buf, C, W> {
+    /// The core framed implementation.
+    ///
+    /// This field is made public to be used in the [`functions`](crate::functions) module for library authors.
+    /// If you are using this crate as a user, you should probably not care about this field.
     pub core: FramedCore<'buf, C, W>,
 }
 

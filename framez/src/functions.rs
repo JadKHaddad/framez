@@ -1,3 +1,11 @@
+//! Utility functions for reading and writing frames.
+//!
+//! This module provides functions to read and write frames by decoupling the read and write states.
+//! It is meant to be used for sending the read bytes back through the same stream without splitting the `Framed` instance.
+//! This is useful for echo servers or protocol implementations that perform automatic responses while decoding frames.
+//!
+//! E.g. the websockets protocol requires to respond to the `ping` frame with a `pong` frame with the same payload.
+
 use embedded_io_async::{Read, Write};
 
 use crate::{
@@ -17,6 +25,18 @@ const READ: &str = "framez::read";
 #[cfg(any(feature = "log", feature = "defmt", feature = "tracing"))]
 const WRITE: &str = "framez::write";
 
+/// Tries to read a frame.
+///
+/// # Return value
+///
+/// - `Some(Ok(None))` if the buffer is not framable. Call `maybe_next` again to read more bytes.
+/// - `Some(Ok(Some(frame)))` if a frame was successfully decoded. Call `maybe_next` again to read more bytes.
+/// - `Some(Err(error))` if an error occurred. The caller should stop reading.
+/// - `None` if eof was reached. The caller should stop reading.
+///
+/// # Usage
+///
+/// See [`next!`](crate::next!).
 pub async fn maybe_next<'buf, C, R>(
     state: &'buf mut ReadState<'_>,
     codec: &mut C,
@@ -156,6 +176,9 @@ where
     }
 }
 
+/// Like [`maybe_next`], but maps the decoded item to another type using the provided `map` function.
+///
+/// The output type `U` is static. This means it is decoupled from the lifetime of the [`ReadState`].
 pub async fn maybe_next_mapped<'buf, C, R, U>(
     state: &'buf mut ReadState<'_>,
     codec: &mut C,
@@ -175,6 +198,13 @@ where
     }
 }
 
+/// Tries to read a frame and converts it using the given `map` function.
+///
+/// # Return value
+///
+/// - `Some(Ok(U))` if a frame was successfully decoded and mapped. Call `next` again to read more frames.
+/// - `Some(Err(error))` if an error occurred. The caller should stop reading.
+/// - `None` if eof was reached. The caller should stop reading.
 pub async fn next<'buf, C, R, U>(
     state: &'buf mut ReadState<'_>,
     codec: &mut C,
@@ -196,6 +226,7 @@ where
     }
 }
 
+/// Sends a frame.
 pub async fn send<C, W, I>(
     state: &mut WriteState<'_>,
     codec: &mut C,

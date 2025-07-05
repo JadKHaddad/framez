@@ -1,3 +1,4 @@
+/// Convenience macro to call [`maybe_next`](crate::functions::maybe_next) on a [`Framed`](crate::Framed) or [`FramedRead`](`crate::FramedRead`).
 #[macro_export]
 macro_rules! maybe_next {
     ($framed:expr) => {{
@@ -10,7 +11,7 @@ macro_rules! maybe_next {
     }};
 }
 
-/// Calls [`Framed::maybe_next`](crate::Framed::maybe_next) in a loop until a frame is returned or an error occurs.
+/// Calls [`maybe_next!`](crate::maybe_next!) on a [`Framed`](crate::Framed) or [`FramedRead`](`crate::FramedRead`) in a loop until a frame is returned or an error occurs.
 ///
 /// # Return value
 ///
@@ -31,6 +32,7 @@ macro_rules! next {
     }};
 }
 
+/// Convenience macro to call [`send`](crate::functions::send) on a [`Framed`](crate::Framed) or [`FramedWrite`](`crate::FramedWrite`).
 #[macro_export]
 macro_rules! send {
     ($framed:expr, $item:expr) => {{
