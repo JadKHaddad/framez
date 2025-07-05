@@ -38,6 +38,11 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [[example]]
+name = "echo"
+path = "examples/echo.rs"
+required-features = []
+
+[[example]]
 name = "zerocopy"
 path = "examples/zerocopy.rs"
 required-features = []
